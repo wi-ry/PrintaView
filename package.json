@@ -27,11 +27,17 @@
   "build": {
     "appId": "com.printaview.app",
     "productName": "PrintaView",
+    "compression": "maximum",
+    "asar": true,
     "files": [
       "src/**/*",
       "build/icon.ico",
       "build/icon.png",
-      "package.json"
+      "package.json",
+      "!**/*.map",
+      "!**/*.md",
+      "!**/test/**",
+      "!**/tests/**"
     ],
     "directories": {
       "output": "release"
