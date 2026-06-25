@@ -46,6 +46,47 @@
       .settings-item input[type="radio"] {
         cursor: pointer;
       }
+      .theme-options {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .theme-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .theme-option:hover {
+        border-color: var(--accent);
+      }
+      .theme-option input {
+        margin: 0;
+      }
+      .theme-label {
+        flex: 1;
+      }
+      .theme-swatch {
+        width: 42px;
+        height: 20px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.16);
+      }
+      .theme-swatch.default {
+        background: linear-gradient(160deg, #ece5d4 0%, #e4dcc8 100%);
+      }
+      .theme-swatch.pastel-pink {
+        background: linear-gradient(160deg, #f7e5ee 0%, #efd6e2 100%);
+      }
+      .theme-swatch.baby-blue {
+        background: linear-gradient(160deg, #e6f0fb 0%, #d8e5f4 100%);
+      }
       .pane-position-toggle {
         display: flex;
         gap: 8px;
@@ -174,6 +215,25 @@
             <input id="show-details-pane" type="checkbox" checked />
             Show Details Pane
           </label>
+        </div>
+        <div class="settings-item">
+          <div class="theme-options" role="radiogroup" aria-label="Theme">
+            <label class="theme-option">
+              <input type="radio" name="theme" value="default" checked />
+              <span class="theme-label">Default</span>
+              <span class="theme-swatch default" aria-hidden="true"></span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="pastel-pink" />
+              <span class="theme-label">Pastel Pink</span>
+              <span class="theme-swatch pastel-pink" aria-hidden="true"></span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="baby-blue" />
+              <span class="theme-label">Baby Blue</span>
+              <span class="theme-swatch baby-blue" aria-hidden="true"></span>
+            </label>
+          </div>
         </div>
       </div>
 

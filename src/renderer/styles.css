@@ -9,6 +9,48 @@
   --line: #d5ccb9;
   --preview-size: 190px;
   --shadow: 0 10px 25px rgba(48, 42, 30, 0.12);
+  --bg-grad-1: #faf6ec;
+  --bg-grad-2: #f0e8d6;
+  --bg-grad-base-start: #ece5d4;
+  --bg-grad-base-end: #e4dcc8;
+  --toolbar-bg: rgba(248, 244, 234, 0.92);
+  --path-row-bg: rgba(248, 244, 234, 0.7);
+}
+
+:root[data-theme='pastel-pink'] {
+  --bg: #f8e7ee;
+  --panel: #fff2f7;
+  --surface: #fff9fc;
+  --ink: #3b2730;
+  --ink-soft: #7f6570;
+  --accent: #c75f89;
+  --accent-strong: #a3486f;
+  --line: #e7c7d4;
+  --shadow: 0 10px 25px rgba(116, 53, 79, 0.14);
+  --bg-grad-1: #fff0f6;
+  --bg-grad-2: #f8dfe9;
+  --bg-grad-base-start: #f7e5ee;
+  --bg-grad-base-end: #efd6e2;
+  --toolbar-bg: rgba(255, 237, 246, 0.92);
+  --path-row-bg: rgba(255, 237, 246, 0.72);
+}
+
+:root[data-theme='baby-blue'] {
+  --bg: #e7eff9;
+  --panel: #f2f7ff;
+  --surface: #fbfdff;
+  --ink: #243346;
+  --ink-soft: #5f7289;
+  --accent: #3f8bd8;
+  --accent-strong: #2f73b8;
+  --line: #c8d8ea;
+  --shadow: 0 10px 25px rgba(45, 88, 136, 0.14);
+  --bg-grad-1: #f0f6ff;
+  --bg-grad-2: #dfeaf8;
+  --bg-grad-base-start: #e6f0fb;
+  --bg-grad-base-end: #d8e5f4;
+  --toolbar-bg: rgba(237, 245, 255, 0.92);
+  --path-row-bg: rgba(237, 245, 255, 0.72);
 }
 
 * {
@@ -22,9 +64,9 @@ body {
   font-family: "Segoe UI Variable", "Trebuchet MS", "Gill Sans", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 20% 10%, #faf6ec 0%, transparent 45%),
-    radial-gradient(circle at 90% 20%, #f0e8d6 0%, transparent 45%),
-    linear-gradient(160deg, #ece5d4 0%, #e4dcc8 100%);
+    radial-gradient(circle at 20% 10%, var(--bg-grad-1) 0%, transparent 45%),
+    radial-gradient(circle at 90% 20%, var(--bg-grad-2) 0%, transparent 45%),
+    linear-gradient(160deg, var(--bg-grad-base-start) 0%, var(--bg-grad-base-end) 100%);
 }
 
 .app-shell {
@@ -44,7 +86,7 @@ body {
   flex-wrap: wrap;
   padding: 14px 18px;
   border-bottom: 1px solid var(--line);
-  background: rgba(248, 244, 234, 0.92);
+  background: var(--toolbar-bg);
   backdrop-filter: blur(7px);
 }
 
@@ -113,6 +155,7 @@ button:hover {
   font-size: 0.9rem;
   color: var(--ink-soft);
   flex-shrink: 0;
+  background: var(--path-row-bg);
 }
 
 .path-row .browse-btn {

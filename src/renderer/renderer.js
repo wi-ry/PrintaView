@@ -120,6 +120,15 @@ function toFileUrl(filePath) {
   return `file:///${encodeURI(normalized)}`;
 }
 
+function applyTheme(theme) {
+  if (!theme || theme === 'default') {
+    document.documentElement.removeAttribute('data-theme');
+    return;
+  }
+
+  document.documentElement.setAttribute('data-theme', theme);
+}
+
 function hideContextMenu() {
   contextMenu.classList.add('hidden');
   contextMenuTargetPath = null;
@@ -454,6 +463,8 @@ async function applySettingsFromStore() {
   if (settings.sortBy) {
     sortSelect.value = settings.sortBy;
   }
+
+  applyTheme(settings.theme || 'default');
 
   detailsPane.classList.toggle('hidden', settings.showDetailsPane === false);
   detailsPane.classList.toggle('pane-left', settings.panePosition === 'left');

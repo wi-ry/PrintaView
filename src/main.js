@@ -108,7 +108,8 @@ function loadSettings() {
       showHidden: false,
       panePosition: 'right',
       sortBy: 'recent',
-      favoritesFilter: 'all'
+      favoritesFilter: 'all',
+      theme: 'default'
     };
   }
   try {
@@ -116,12 +117,14 @@ function loadSettings() {
     const parsed = JSON.parse(raw);
     const allowedSort = new Set(['recent', 'name', 'type']);
     const allowedFavoritesFilter = new Set(['all', 'favorites']);
+    const allowedThemes = new Set(['default', 'pastel-pink', 'baby-blue']);
     return {
       showDetailsPane: parsed.showDetailsPane !== false,
       showHidden: parsed.showHidden === true,
       panePosition: parsed.panePosition || 'right',
       sortBy: allowedSort.has(parsed.sortBy) ? parsed.sortBy : 'recent',
-      favoritesFilter: allowedFavoritesFilter.has(parsed.favoritesFilter) ? parsed.favoritesFilter : 'all'
+      favoritesFilter: allowedFavoritesFilter.has(parsed.favoritesFilter) ? parsed.favoritesFilter : 'all',
+      theme: allowedThemes.has(parsed.theme) ? parsed.theme : 'default'
     };
   } catch (error) {
     return {
@@ -129,7 +132,8 @@ function loadSettings() {
       showHidden: false,
       panePosition: 'right',
       sortBy: 'recent',
-      favoritesFilter: 'all'
+      favoritesFilter: 'all',
+      theme: 'default'
     };
   }
 }

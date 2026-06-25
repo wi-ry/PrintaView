@@ -1,5 +1,6 @@
 const showDetailsPaneCheckbox = document.getElementById('show-details-pane');
 const showHiddenToggle = document.getElementById('show-hidden');
+const themeInputs = document.querySelectorAll('input[name="theme"]');
 const paneLeftBtn = document.getElementById('pane-left-btn');
 const paneRightBtn = document.getElementById('pane-right-btn');
 const hiddenItemsList = document.getElementById('hidden-items-list');
@@ -15,8 +16,29 @@ let originalSettings = {};
 let pendingSettings = {
   showDetailsPane: true,
   showHidden: false,
-  panePosition: 'right'
+  panePosition: 'right',
+  theme: 'default'
 };
+
+function applyTheme(theme) {
+  if (!theme || theme === 'default') {
+    document.documentElement.removeAttribute('data-theme');
+    return;
+  }
+
+  document.documentElement.setAttribute('data-theme', theme);
+}
+
+function setThemeInputValue(theme) {
+  themeInputs.forEach((input) => {
+    input.checked = input.value === theme;
+  });
+}
+
+function getSelectedTheme() {
+  const selected = document.querySelector('input[name="theme"]:checked');
+  return selected ? selected.value : 'default';
+}
 
 // Sync with main window
 async function syncSettings() {
@@ -27,7 +49,9 @@ async function syncSettings() {
   
   showDetailsPaneCheckbox.checked = settings.showDetailsPane;
   showHiddenToggle.checked = settings.showHidden;
+  setThemeInputValue(settings.theme || 'default');
   currentPanePosition = settings.panePosition;
+  applyTheme(getSelectedTheme());
   
   updatePanePositionUI();
   await updateHiddenItemsList();
@@ -74,6 +98,14 @@ showDetailsPaneCheckbox.addEventListener('change', () => {
 
 showHiddenToggle.addEventListener('change', () => {
   pendingSettings.showHidden = showHiddenToggle.checked;
+});
+
+themeInputs.forEach((input) => {
+  input.addEventListener('change', () => {
+    const theme = getSelectedTheme();
+    pendingSettings.theme = theme;
+    applyTheme(theme);
+  });
 });
 
 paneLeftBtn.addEventListener('click', () => {
