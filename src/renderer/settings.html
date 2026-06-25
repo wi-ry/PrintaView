@@ -130,6 +130,39 @@
         border-color: var(--accent);
         background: rgba(6, 102, 122, 0.08);
       }
+      .settings-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+      }
+      .settings-buttons button {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 100ms ease;
+      }
+      .settings-buttons #save-btn {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+      }
+      .settings-buttons #save-btn:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+      }
+      .settings-buttons #cancel-btn {
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .settings-buttons #cancel-btn:hover {
+        border-color: var(--accent);
+        background: rgba(6, 102, 122, 0.08);
+      }
     </style>
   </head>
   <body>
@@ -153,18 +186,20 @@
       </div>
 
       <div class="settings-section">
+        <div class="settings-section-title">Hidden Items</div>
         <div class="settings-item">
           <label>
             <input id="show-hidden" type="checkbox" />
             Show Hidden Files
           </label>
         </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Hidden Items</div>
         <div id="hidden-items-list"></div>
         <button id="clear-all-hidden" type="button">Clear All Hidden Items</button>
+      </div>
+
+      <div class="settings-buttons">
+        <button id="cancel-btn" type="button">Cancel</button>
+        <button id="save-btn" type="button">Save</button>
       </div>
     </div>
 

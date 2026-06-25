@@ -8,7 +8,8 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 - Previews for common image formats (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`) and PDFs.
 - Generic tile preview for other file types.
 - Right-click any file or folder to `Hide`/`Unhide` via app-managed hidden state (does not change Windows hidden attribute).
-- Toolbar toggle to show or hide app-hidden items.
+- `Show Hidden Files` setting in the Settings window.
+- Favorites support with `Show: All` / `Show: Favorites` toolbar toggle.
 - Sort by:
   - Name
   - Type
@@ -28,6 +29,12 @@ npm install
 
 ```powershell
 npm start
+```
+
+3. Run tests:
+
+```powershell
+npm test
 ```
 
 ## Build Standalone Portable EXE (Windows)

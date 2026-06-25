@@ -1,37 +1,41 @@
+import * as pdfjsLib from '../../node_modules/pdfjs-dist/build/pdf.mjs';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  '../../node_modules/pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).toString();
+
 const gridElement = document.getElementById('grid');
 const downloadsPathElement = document.getElementById('downloads-path');
 const sortSelect = document.getElementById('sort-select');
 const sizeRange = document.getElementById('size-range');
+const favoritesAllButton = document.getElementById('favorites-all-button');
+const favoritesOnlyButton = document.getElementById('favorites-only-button');
 const refreshButton = document.getElementById('refresh-button');
 const browseButton = document.getElementById('browse-button');
 const contextMenu = document.getElementById('context-menu');
 const openItemButton = document.getElementById('open-item');
+const revealItemButton = document.getElementById('reveal-item');
+const toggleFavoriteButton = document.getElementById('toggle-favorite-item');
 const toggleHideButton = document.getElementById('toggle-hide-item');
 const cardTemplate = document.getElementById('card-template');
-const viewMenu = document.getElementById('view-menu');
 const viewMenuButton = document.getElementById('view-menu-button');
-const openSettingsBtn = document.getElementById('open-settings-btn');
 const detailsPane = document.getElementById('details-pane');
+const itemUtils = window.PrintaViewItemUtils;
 
 let downloadsPath = '';
 let allItems = [];
 let contextMenuTargetPath = null;
 let contextMenuTargetHidden = false;
+let contextMenuTargetFavorite = false;
 let selectedItemId = null;
 let showHiddenFiles = false;
-let currentPanePosition = 'right';
+let showOnlyFavorites = false;
+const collapsedTypeGroups = new Set();
 
-// Image caching and lazy loading
 const imageCache = new Map();
-const lazyLoadObserver = new IntersectionObserver((entries) => {
-  entries.forEach((entry) => {
-    if (entry.isIntersecting) {
-      const preview = entry.target;
-      loadPreviewContent(preview);
-      lazyLoadObserver.unobserve(preview);
-    }
-  });
-}, { rootMargin: '50px' });
+const pdfThumbnailCache = new Map();
+const pdfThumbnailInFlight = new Map();
 
 function cachePreview(filePath, dataUrl) {
   imageCache.set(filePath, dataUrl);
@@ -41,36 +45,53 @@ function getCachedPreview(filePath) {
   return imageCache.get(filePath);
 }
 
-async function loadPreviewContent(previewElement) {
-  if (previewElement.dataset.loaded === 'true') {
-    return;
+async function getPdfThumbnailData(filePath) {
+  const cached = pdfThumbnailCache.get(filePath);
+  if (cached) {
+    return cached;
   }
 
-  const itemId = previewElement.closest('.card')?.getAttribute('data-item-id');
-  if (!itemId) return;
+  const inFlight = pdfThumbnailInFlight.get(filePath);
+  if (inFlight) {
+    return inFlight;
+  }
 
-  const item = allItems.find((i) => i.id === itemId);
-  if (!item) return;
+  const generationTask = (async () => {
+    const loadingTask = pdfjsLib.getDocument({ url: toFileUrl(filePath) });
+    const pdf = await loadingTask.promise;
 
-  if (item.previewType === 'image') {
-    const cached = getCachedPreview(item.path);
-    if (cached) {
-      const img = previewElement.querySelector('img');
-      if (img) img.src = cached;
-      previewElement.dataset.loaded = 'true';
-      return;
-    }
+    try {
+      const page = await pdf.getPage(1);
+      const initialViewport = page.getViewport({ scale: 1 });
+      const targetWidth = 320;
+      const scale = targetWidth / initialViewport.width;
+      const viewport = page.getViewport({ scale });
 
-    const img = previewElement.querySelector('img');
-    if (img) {
-      img.onload = () => {
-        cachePreview(item.path, img.src);
-        previewElement.dataset.loaded = 'true';
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+
+      const context = canvas.getContext('2d', { alpha: false });
+      await page.render({ canvasContext: context, viewport }).promise;
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      const thumbnailData = {
+        dataUrl,
+        pageCount: pdf.numPages
       };
+      pdfThumbnailCache.set(filePath, thumbnailData);
+      return thumbnailData;
+    } finally {
+      pdf.cleanup();
+      loadingTask.destroy();
     }
-  } else {
-    previewElement.dataset.loaded = 'true';
-  }
+  })()
+    .finally(() => {
+      pdfThumbnailInFlight.delete(filePath);
+    });
+
+  pdfThumbnailInFlight.set(filePath, generationTask);
+  return generationTask;
 }
 
 function formatDate(value) {
@@ -99,44 +120,54 @@ function toFileUrl(filePath) {
   return `file:///${encodeURI(normalized)}`;
 }
 
-function getSortedItems(items) {
-  const sortBy = sortSelect.value;
-  const copy = [...items];
-
-  if (sortBy === 'name') {
-    copy.sort((a, b) => a.name.localeCompare(b.name));
-    return copy;
-  }
-
-  if (sortBy === 'type') {
-    copy.sort((a, b) => {
-      const typeA = a.itemType === 'folder' ? 'folder' : a.extension;
-      const typeB = b.itemType === 'folder' ? 'folder' : b.extension;
-      const byType = typeA.localeCompare(typeB);
-      if (byType !== 0) {
-        return byType;
-      }
-      return a.name.localeCompare(b.name);
-    });
-    return copy;
-  }
-
-  copy.sort((a, b) => (b.createdTimeMs || 0) - (a.createdTimeMs || 0));
-  return copy;
-}
-
 function hideContextMenu() {
   contextMenu.classList.add('hidden');
   contextMenuTargetPath = null;
   contextMenuTargetHidden = false;
+  contextMenuTargetFavorite = false;
+}
+
+function getVisibleItems() {
+  if (!showOnlyFavorites) {
+    return allItems;
+  }
+  return allItems.filter((item) => item.favoritedByApp);
+}
+
+function updateFavoritesToggleUI() {
+  if (!favoritesAllButton || !favoritesOnlyButton) {
+    return;
+  }
+
+  const allActive = !showOnlyFavorites;
+  favoritesAllButton.classList.toggle('active', allActive);
+  favoritesOnlyButton.classList.toggle('active', !allActive);
+  favoritesAllButton.setAttribute('aria-pressed', allActive ? 'true' : 'false');
+  favoritesOnlyButton.setAttribute('aria-pressed', allActive ? 'false' : 'true');
+}
+
+function saveMainViewPreferences() {
+  window.printaViewApi.saveSettings({
+    sortBy: sortSelect.value,
+    favoritesFilter: showOnlyFavorites ? 'favorites' : 'all'
+  });
 }
 
 function updateDetailsPaneFromItem(item) {
   document.getElementById('detail-name').textContent = item.name;
-  document.getElementById('detail-type').textContent = item.itemType === 'folder' ? 'Folder' : (item.extension || 'File').toUpperCase();
+  document.getElementById('detail-type').textContent =
+    item.itemType === 'folder' ? 'Folder' : (item.extension || 'File').toUpperCase();
   document.getElementById('detail-size').textContent = formatSize(item.size);
   document.getElementById('detail-modified').textContent = formatDate(item.createdTimeMs || item.modifiedTimeMs);
   document.getElementById('detail-path').textContent = item.path;
+}
+
+function clearDetailsPane() {
+  document.getElementById('detail-name').textContent = '-';
+  document.getElementById('detail-type').textContent = '-';
+  document.getElementById('detail-size').textContent = '-';
+  document.getElementById('detail-modified').textContent = '-';
+  document.getElementById('detail-path').textContent = '-';
 }
 
 function selectCard(item) {
@@ -144,174 +175,360 @@ function selectCard(item) {
   if (previousSelected) {
     previousSelected.classList.remove('selected');
   }
+
   const newSelected = gridElement.querySelector(`[data-item-id="${item.id}"]`);
   if (newSelected) {
     newSelected.classList.add('selected');
   }
+
   selectedItemId = item.id;
   updateDetailsPaneFromItem(item);
 }
 
-async function setItemHidden(path, hidden) {
-  await window.printaViewApi.setHidden({ path, hidden });
-  await loadItems();
+async function setItemHidden(itemPath, hidden) {
+  await window.printaViewApi.setHidden({ path: itemPath, hidden });
+
+  allItems = allItems
+    .map((item) => {
+      if (item.path.toLowerCase() !== itemPath.toLowerCase()) {
+        return item;
+      }
+      return { ...item, hiddenByApp: hidden };
+    })
+    .filter((item) => showHiddenFiles || !item.hiddenByApp);
+
+  renderItems();
+
+  const visibleItems = getVisibleItems();
+  if (visibleItems.length === 0) {
+    selectedItemId = null;
+    clearDetailsPane();
+    return;
+  }
+
+  const keepSelected = visibleItems.find((item) => item.id === selectedItemId) || visibleItems[0];
+  selectCard(keepSelected);
+}
+
+async function setItemFavorite(itemPath, favorite) {
+  await window.printaViewApi.setFavorite({ path: itemPath, favorite });
+
+  allItems = allItems.map((item) => {
+    if (item.path.toLowerCase() !== itemPath.toLowerCase()) {
+      return item;
+    }
+    return { ...item, favoritedByApp: favorite };
+  });
+
+  renderItems();
+
+  const visibleItems = getVisibleItems();
+  if (visibleItems.length === 0) {
+    selectedItemId = null;
+    clearDetailsPane();
+    return;
+  }
+
+  const keepSelected = visibleItems.find((item) => item.id === selectedItemId) || visibleItems[0];
+  selectCard(keepSelected);
 }
 
 function buildPreview(item) {
   const preview = document.createElement('div');
   preview.className = 'preview';
-  preview.dataset.loaded = 'false';
 
   if (item.previewType === 'image') {
     const image = document.createElement('img');
     image.loading = 'lazy';
-    // Start with a cached version if available
     const cached = getCachedPreview(item.path);
+
     if (cached) {
       image.src = cached;
-      preview.dataset.loaded = 'true';
     } else {
       image.src = toFileUrl(item.path);
+      image.onload = () => cachePreview(item.path, image.src);
     }
+
     image.alt = item.name;
     preview.appendChild(image);
     return preview;
   }
 
   if (item.previewType === 'pdf') {
-    const object = document.createElement('object');
-    object.data = `${toFileUrl(item.path)}#toolbar=0&navpanes=0`;
-    object.type = 'application/pdf';
-    preview.appendChild(object);
-    preview.dataset.loaded = 'true';
+    const pdfThumb = document.createElement('div');
+    pdfThumb.className = 'pdf-thumb';
+
+    const pdfImage = document.createElement('img');
+    pdfImage.alt = `${item.name} thumbnail`;
+    pdfImage.className = 'pdf-thumb-image';
+    pdfThumb.appendChild(pdfImage);
+
+    const pdfLabel = document.createElement('div');
+    pdfLabel.className = 'pdf-label';
+    pdfLabel.textContent = 'PDF';
+
+    const pdfHint = document.createElement('div');
+    pdfHint.className = 'pdf-hint';
+    pdfHint.textContent = 'Double-click to open';
+
+    const pdfPageCount = document.createElement('div');
+    pdfPageCount.className = 'pdf-page-count';
+    pdfPageCount.textContent = '...';
+
+    pdfThumb.appendChild(pdfLabel);
+    pdfThumb.appendChild(pdfHint);
+    pdfThumb.appendChild(pdfPageCount);
+
+    getPdfThumbnailData(item.path)
+      .then((thumbnailData) => {
+        pdfImage.src = thumbnailData.dataUrl;
+        pdfThumb.classList.add('has-image');
+
+        const pageCount = Number(thumbnailData.pageCount) || 0;
+        pdfPageCount.textContent = pageCount === 1 ? '1 page' : `${pageCount} pages`;
+      })
+      .catch(() => {
+        // Keep the fallback label/hint if thumbnail generation fails.
+        pdfPageCount.textContent = 'PDF';
+      });
+
+    preview.appendChild(pdfThumb);
     return preview;
   }
 
   const text = document.createElement('div');
-  if (item.itemType === 'folder') {
-    text.className = 'folder';
-    text.textContent = 'Folder';
-  } else {
-    text.className = 'generic';
-    text.textContent = (item.extension || 'FILE').replace('.', '').toUpperCase();
-  }
+  text.className = item.itemType === 'folder' ? 'folder' : 'generic';
+  text.textContent = item.itemType === 'folder'
+    ? 'Folder'
+    : (item.extension || 'FILE').replace('.', '').toUpperCase();
 
   preview.appendChild(text);
-  preview.dataset.loaded = 'true';
   return preview;
+}
+
+function getTypeGroupKey(item) {
+  return (item.extension || '').toLowerCase() || 'unknown';
+}
+
+function getTypeGroupLabel(typeKey) {
+  if (typeKey === 'unknown') {
+    return 'UNKNOWN';
+  }
+  return typeKey.replace('.', '').toUpperCase();
+}
+
+function buildCard(item) {
+  const card = cardTemplate.content.firstElementChild.cloneNode(true);
+  const previewContainer = card.querySelector('.preview');
+  const title = card.querySelector('.title');
+
+  card.setAttribute('data-item-id', item.id);
+  previewContainer.replaceWith(buildPreview(item));
+  title.textContent = item.name;
+
+  if (item.hiddenByApp) {
+    card.classList.add('hidden-card');
+  }
+
+  if (item.favoritedByApp) {
+    card.classList.add('favorite-card');
+    const favoriteBadge = document.createElement('div');
+    favoriteBadge.className = 'favorite-badge';
+    favoriteBadge.textContent = '★';
+    favoriteBadge.title = 'Favorite';
+    card.appendChild(favoriteBadge);
+  }
+
+  card.addEventListener('click', () => {
+    selectCard(item);
+  });
+
+  card.addEventListener('dblclick', async () => {
+    await window.printaViewApi.openItem({ path: item.path });
+  });
+
+  const previewElement = card.querySelector('.preview');
+  if (previewElement) {
+    previewElement.addEventListener('dblclick', async (event) => {
+      event.stopPropagation();
+      await window.printaViewApi.openItem({ path: item.path });
+    });
+  }
+
+  card.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    contextMenuTargetPath = item.path;
+    contextMenuTargetHidden = item.hiddenByApp;
+    contextMenuTargetFavorite = item.favoritedByApp;
+    toggleFavoriteButton.textContent = item.favoritedByApp ? 'Unfavorite' : 'Favorite';
+    toggleHideButton.textContent = item.hiddenByApp ? 'Unhide' : 'Hide';
+    contextMenu.style.left = `${event.clientX}px`;
+    contextMenu.style.top = `${event.clientY}px`;
+    contextMenu.classList.remove('hidden');
+  });
+
+  return card;
 }
 
 function renderItems() {
   gridElement.innerHTML = '';
-  const sorted = getSortedItems(allItems);
+  updateFavoritesToggleUI();
+  const sortBy = sortSelect.value;
+  const sorted = itemUtils.sortItems(getVisibleItems(), sortBy);
+
+  if (sortBy !== 'type') {
+    gridElement.classList.remove('grouped-by-type');
+    for (const item of sorted) {
+      gridElement.appendChild(buildCard(item));
+    }
+    return;
+  }
+
+  gridElement.classList.add('grouped-by-type');
+  const grouped = new Map();
 
   for (const item of sorted) {
-    const card = cardTemplate.content.firstElementChild.cloneNode(true);
-    const previewContainer = card.querySelector('.preview');
-    const title = card.querySelector('.title');
+    const typeKey = getTypeGroupKey(item);
+    if (!grouped.has(typeKey)) {
+      grouped.set(typeKey, []);
+    }
+    grouped.get(typeKey).push(item);
+  }
 
-    card.setAttribute('data-item-id', item.id);
-    previewContainer.replaceWith(buildPreview(item));
+  for (const [typeKey, items] of grouped.entries()) {
+    const group = document.createElement('section');
+    group.className = 'type-group';
+    group.dataset.type = typeKey;
 
-    title.textContent = item.name;
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'type-group-header';
+    header.setAttribute('aria-expanded', collapsedTypeGroups.has(typeKey) ? 'false' : 'true');
+    header.innerHTML = `<span class="type-group-caret">▾</span><span class="type-group-title">${getTypeGroupLabel(typeKey)}</span><span class="type-group-count">${items.length}</span>`;
 
-    if (item.hiddenByApp) {
-      card.classList.add('hidden-card');
+    const body = document.createElement('div');
+    body.className = 'type-group-body';
+
+    for (const item of items) {
+      body.appendChild(buildCard(item));
     }
 
-    card.addEventListener('click', () => {
-      selectCard(item);
+    if (collapsedTypeGroups.has(typeKey)) {
+      group.classList.add('collapsed');
+    }
+
+    header.addEventListener('click', () => {
+      const nextCollapsed = !group.classList.contains('collapsed');
+      group.classList.toggle('collapsed', nextCollapsed);
+      header.setAttribute('aria-expanded', nextCollapsed ? 'false' : 'true');
+
+      if (nextCollapsed) {
+        collapsedTypeGroups.add(typeKey);
+      } else {
+        collapsedTypeGroups.delete(typeKey);
+      }
     });
 
-    card.addEventListener('dblclick', async () => {
-      await window.printaViewApi.openItem({ path: item.path });
-    });
-
-    card.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
-      contextMenuTargetPath = item.path;
-      contextMenuTargetHidden = item.hiddenByApp;
-      toggleHideButton.textContent = item.hiddenByApp ? 'Unhide' : 'Hide';
-      contextMenu.style.left = `${event.clientX}px`;
-      contextMenu.style.top = `${event.clientY}px`;
-      contextMenu.classList.remove('hidden');
-    });
-
-    gridElement.appendChild(card);
+    group.appendChild(header);
+    group.appendChild(body);
+    gridElement.appendChild(group);
   }
 }
 
 async function loadItems() {
-  const scanned = await window.printaViewApi.scanItems({ downloadsPath, includeHidden: showHiddenFiles });
-  
-  // Supported image and document types
-  const supportedExts = new Set([
-    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.tif', '.tiff', '.ico',
-    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'
-  ]);
-  
-  allItems = scanned.filter((item) => {
-    if (item.itemType === 'folder') {
-      return false;
-    }
-    const ext = item.extension.toLowerCase();
-    return supportedExts.has(ext);
+  const scanned = await window.printaViewApi.scanItems({
+    downloadsPath,
+    includeHidden: showHiddenFiles
   });
-  
+
+  allItems = itemUtils.filterSupportedItems(scanned);
+
   renderItems();
+}
+
+async function applySettingsFromStore() {
+  const settings = await window.printaViewApi.getSettings();
+  showHiddenFiles = settings.showHidden === true;
+  showOnlyFavorites = settings.favoritesFilter === 'favorites';
+
+  if (settings.sortBy) {
+    sortSelect.value = settings.sortBy;
+  }
+
+  detailsPane.classList.toggle('hidden', settings.showDetailsPane === false);
+  detailsPane.classList.toggle('pane-left', settings.panePosition === 'left');
+  updateFavoritesToggleUI();
+}
+
+async function refreshFromSettings() {
+  await applySettingsFromStore();
+  await loadItems();
+
+  const visibleItems = getVisibleItems();
+  if (visibleItems.length > 0) {
+    const keepSelected = visibleItems.find((item) => item.id === selectedItemId) || visibleItems[0];
+    selectCard(keepSelected);
+  } else {
+    selectedItemId = null;
+    clearDetailsPane();
+  }
 }
 
 async function initialize() {
   downloadsPath = await window.printaViewApi.getDownloadsPath();
   downloadsPathElement.textContent = downloadsPath;
-  
-  const settings = await window.printaViewApi.getSettings();
-  showHiddenFiles = settings.showHidden;
-  currentPanePosition = settings.panePosition;
-  
-  if (!settings.showDetailsPane) {
-    detailsPane.classList.add('hidden');
-  }
-  
-  if (currentPanePosition === 'left') {
-    detailsPane.classList.add('pane-left');
-  }
-  
-  await loadItems();
-  if (allItems.length > 0) {
-    selectCard(allItems[0]);
-  }
+
+  await refreshFromSettings();
 }
 
-// Settings moved to Settings window
+sortSelect.addEventListener('change', () => {
+  renderItems();
+  saveMainViewPreferences();
+});
 
-initialize();
+function applyFavoritesFilterSelection(onlyFavorites) {
+  showOnlyFavorites = onlyFavorites;
+  renderItems();
+
+  const visibleItems = getVisibleItems();
+  if (visibleItems.length === 0) {
+    selectedItemId = null;
+    clearDetailsPane();
+  } else if (!visibleItems.some((item) => item.id === selectedItemId)) {
+    selectCard(visibleItems[0]);
+  }
+
+  saveMainViewPreferences();
+}
+
+if (favoritesAllButton) {
+  favoritesAllButton.addEventListener('click', () => {
+    applyFavoritesFilterSelection(false);
+  });
+}
+
+if (favoritesOnlyButton) {
+  favoritesOnlyButton.addEventListener('click', () => {
+    applyFavoritesFilterSelection(true);
+  });
+}
+
 sizeRange.addEventListener('input', () => {
   document.documentElement.style.setProperty('--preview-size', `${sizeRange.value}px`);
 });
-refreshButton.addEventListener('click', loadItems);
+
+refreshButton.addEventListener('click', async () => {
+  await refreshFromSettings();
+});
+
 browseButton.addEventListener('click', async () => {
   const result = await window.printaViewApi.browseFolders();
   if (result.ok) {
     downloadsPath = result.path;
     downloadsPathElement.textContent = downloadsPath;
-    await loadItems();
+    await refreshFromSettings();
   }
 });
-
-// Show View menu on right-click in toolbar area
-document.querySelector('.toolbar').addEventListener('contextmenu', (event) => {
-  event.preventDefault();
-  viewMenu.style.left = `${event.clientX}px`;
-  viewMenu.style.top = `${event.clientY}px`;
-  viewMenu.classList.remove('hidden');
-});
-
-openSettingsBtn.addEventListener('click', () => {
-  window.printaViewApi.openSettings();
-});
-
-// Settings moved to Settings window - old handlers removed
 
 toggleHideButton.addEventListener('click', async () => {
   if (!contextMenuTargetPath) {
@@ -319,6 +536,15 @@ toggleHideButton.addEventListener('click', async () => {
   }
 
   await setItemHidden(contextMenuTargetPath, !contextMenuTargetHidden);
+  hideContextMenu();
+});
+
+toggleFavoriteButton.addEventListener('click', async () => {
+  if (!contextMenuTargetPath) {
+    return;
+  }
+
+  await setItemFavorite(contextMenuTargetPath, !contextMenuTargetFavorite);
   hideContextMenu();
 });
 
@@ -331,50 +557,34 @@ openItemButton.addEventListener('click', async () => {
   hideContextMenu();
 });
 
-// Show View menu on button click
-viewMenuButton.addEventListener('click', (event) => {
-  event.stopPropagation();
-  const rect = viewMenuButton.getBoundingClientRect();
-  // Open to the left of the button
-  viewMenu.style.left = `${rect.left - viewMenu.offsetWidth}px`;
-  viewMenu.style.top = `${rect.bottom + 4}px`;
-  viewMenu.classList.remove('hidden');
+revealItemButton.addEventListener('click', async () => {
+  if (!contextMenuTargetPath) {
+    return;
+  }
+
+  await window.printaViewApi.revealItem({ path: contextMenuTargetPath });
+  hideContextMenu();
 });
+
+if (viewMenuButton) {
+  viewMenuButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    window.printaViewApi.openSettings();
+  });
+}
 
 document.addEventListener('click', () => {
   hideContextMenu();
-  viewMenu.classList.add('hidden');
 });
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     hideContextMenu();
-    viewMenu.classList.add('hidden');
   }
 });
 
-async function initialize() {
-  downloadsPath = await window.printaViewApi.getDownloadsPath();
-  downloadsPathElement.textContent = downloadsPath;
-  
-  const settings = await window.printaViewApi.getSettings();
-  showHiddenFiles = settings.showHidden;
-  currentPanePosition = settings.panePosition;
-  
-  if (!settings.showDetailsPane) {
-    detailsPane.classList.add('hidden');
-  }
-  
-  if (currentPanePosition === 'left') {
-    detailsPane.classList.add('pane-left');
-  }
-  
-  await loadItems();
-  if (allItems.length > 0) {
-    selectCard(allItems[0]);
-  }
-}
-
-// Settings moved to Settings window
+window.addEventListener('focus', async () => {
+  await refreshFromSettings();
+});
 
 initialize();

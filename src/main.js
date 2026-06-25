@@ -5,13 +5,70 @@ const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron')
 
 let mainWindow;
 let settingsWindow;
+let hasMigratedLegacyStorage = false;
+
+const APP_DATA_FOLDER = 'PrintaView';
+const SETTINGS_FILE_NAME = 'printaview-settings.json';
+const HIDDEN_FILE_NAME = 'hidden-items.json';
+const FAVORITES_FILE_NAME = 'favorite-items.json';
+
+function getStableDataDirectory() {
+  const overrideDataDir = process.env.PRINTAVIEW_DATA_DIR;
+  if (overrideDataDir && typeof overrideDataDir === 'string') {
+    return path.resolve(overrideDataDir);
+  }
+
+  return path.join(app.getPath('appData'), APP_DATA_FOLDER);
+}
+
+function migrateLegacyStorageIfNeeded() {
+  if (hasMigratedLegacyStorage) {
+    return;
+  }
+
+  hasMigratedLegacyStorage = true;
+
+  const stableDataDir = getStableDataDirectory();
+  const legacyUserDataDir = app.getPath('userData');
+
+  if (path.resolve(stableDataDir) === path.resolve(legacyUserDataDir)) {
+    return;
+  }
+
+  const fileNames = [SETTINGS_FILE_NAME, HIDDEN_FILE_NAME, FAVORITES_FILE_NAME];
+  for (const fileName of fileNames) {
+    const legacyPath = path.join(legacyUserDataDir, fileName);
+    const stablePath = path.join(stableDataDir, fileName);
+
+    if (!fs.existsSync(legacyPath) || fs.existsSync(stablePath)) {
+      continue;
+    }
+
+    try {
+      fs.copyFileSync(legacyPath, stablePath);
+    } catch (error) {
+      // Ignore migration failure and continue with default behavior.
+    }
+  }
+}
+
+function ensureDataDirectory() {
+  const stableDataDir = getStableDataDirectory();
+  fs.mkdirSync(stableDataDir, { recursive: true });
+  migrateLegacyStorageIfNeeded();
+  return stableDataDir;
+}
 
 function getSettingsPath() {
-  return path.join(app.getPath('userData'), 'printaview-settings.json');
+  return path.join(ensureDataDirectory(), SETTINGS_FILE_NAME);
 }
 
 function getHiddenStorePath() {
-  return path.join(app.getPath('userData'), 'hidden-items.json');
+  return path.join(ensureDataDirectory(), HIDDEN_FILE_NAME);
+}
+
+function getFavoritesStorePath() {
+  return path.join(ensureDataDirectory(), FAVORITES_FILE_NAME);
 }
 
 function loadCustomRootFolder() {
@@ -46,18 +103,34 @@ function saveCustomRootFolder(folderPath) {
 function loadSettings() {
   const settingsPath = getSettingsPath();
   if (!fs.existsSync(settingsPath)) {
-    return { showDetailsPane: true, showHidden: false, panePosition: 'right' };
+    return {
+      showDetailsPane: true,
+      showHidden: false,
+      panePosition: 'right',
+      sortBy: 'recent',
+      favoritesFilter: 'all'
+    };
   }
   try {
     const raw = fs.readFileSync(settingsPath, 'utf8');
     const parsed = JSON.parse(raw);
+    const allowedSort = new Set(['recent', 'name', 'type']);
+    const allowedFavoritesFilter = new Set(['all', 'favorites']);
     return {
       showDetailsPane: parsed.showDetailsPane !== false,
       showHidden: parsed.showHidden === true,
-      panePosition: parsed.panePosition || 'right'
+      panePosition: parsed.panePosition || 'right',
+      sortBy: allowedSort.has(parsed.sortBy) ? parsed.sortBy : 'recent',
+      favoritesFilter: allowedFavoritesFilter.has(parsed.favoritesFilter) ? parsed.favoritesFilter : 'all'
     };
   } catch (error) {
-    return { showDetailsPane: true, showHidden: false, panePosition: 'right' };
+    return {
+      showDetailsPane: true,
+      showHidden: false,
+      panePosition: 'right',
+      sortBy: 'recent',
+      favoritesFilter: 'all'
+    };
   }
 }
 
@@ -118,6 +191,40 @@ function saveHiddenPaths(hiddenSet) {
   fs.writeFileSync(storePath, JSON.stringify(entries, null, 2), 'utf8');
 }
 
+function loadFavoritePaths() {
+  const storePath = getFavoritesStorePath();
+  if (!fs.existsSync(storePath)) {
+    return new Set();
+  }
+
+  try {
+    const raw = fs.readFileSync(storePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return new Set();
+    }
+
+    const normalized = parsed
+      .filter((item) => typeof item === 'string')
+      .map((item) => normalizePathForKey(item));
+
+    return new Set(normalized);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function saveFavoritePaths(favoriteSet) {
+  const storePath = getFavoritesStorePath();
+  const entries = [...favoriteSet];
+  fs.mkdirSync(path.dirname(storePath), { recursive: true });
+  fs.writeFileSync(storePath, JSON.stringify(entries, null, 2), 'utf8');
+}
+
+function isPathFavorited(targetPath, favoriteSet) {
+  return favoriteSet.has(normalizePathForKey(targetPath));
+}
+
 function isPathHidden(targetPath, hiddenSet) {
   const normalized = normalizePathForKey(targetPath);
   const segments = normalized.split(path.sep);
@@ -151,7 +258,7 @@ function categorizeFile(filePath, isDirectory) {
   return { itemType: 'file', previewType: 'generic' };
 }
 
-async function walkDirectoryRecursive(rootDir, hiddenSet, includeHidden) {
+async function walkDirectoryRecursive(rootDir, hiddenSet, favoriteSet, includeHidden) {
   const allItems = [];
   const stack = [rootDir];
 
@@ -188,7 +295,8 @@ async function walkDirectoryRecursive(rootDir, hiddenSet, includeHidden) {
         modifiedTimeMs: stats.mtimeMs,
         createdTimeMs: stats.birthtimeMs,
         size: stats.size,
-        hiddenByApp: shouldHide
+        hiddenByApp: shouldHide,
+        favoritedByApp: isPathFavorited(absolutePath, favoriteSet)
       };
 
       if (includeHidden || !shouldHide) {
@@ -282,7 +390,8 @@ ipcMain.handle('items:scan', async (_event, payload = {}) => {
   const downloadsPath = payload.downloadsPath || path.join(os.homedir(), 'Downloads');
   const includeHidden = Boolean(payload.includeHidden);
   const hiddenSet = loadHiddenPaths();
-  return walkDirectoryRecursive(downloadsPath, hiddenSet, includeHidden);
+  const favoriteSet = loadFavoritePaths();
+  return walkDirectoryRecursive(downloadsPath, hiddenSet, favoriteSet, includeHidden);
 });
 
 ipcMain.handle('items:setHidden', (_event, payload = {}) => {
@@ -320,6 +429,41 @@ ipcMain.handle('items:open', async (_event, payload = {}) => {
   return { ok: true };
 });
 
+ipcMain.handle('items:reveal', (_event, payload = {}) => {
+  const inputPath = payload.path;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  try {
+    shell.showItemInFolder(inputPath);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+});
+
+ipcMain.handle('items:setFavorite', (_event, payload = {}) => {
+  const inputPath = payload.path;
+  const favorite = Boolean(payload.favorite);
+
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  const favoriteSet = loadFavoritePaths();
+  const normalized = normalizePathForKey(inputPath);
+
+  if (favorite) {
+    favoriteSet.add(normalized);
+  } else {
+    favoriteSet.delete(normalized);
+  }
+
+  saveFavoritePaths(favoriteSet);
+  return { ok: true };
+});
+
 ipcMain.handle('settings:get', () => {
   return loadSettings();
 });
@@ -332,7 +476,8 @@ ipcMain.handle('settings:save', (_event, payload = {}) => {
 ipcMain.handle('hidden:getItems', async (_event, payload = {}) => {
   const downloadsPath = payload.downloadsPath || getRootFolder();
   const hiddenSet = loadHiddenPaths();
-  const items = await walkDirectoryRecursive(downloadsPath, hiddenSet, true);
+  const favoriteSet = loadFavoritePaths();
+  const items = await walkDirectoryRecursive(downloadsPath, hiddenSet, favoriteSet, true);
   return items.filter((item) => item.hiddenByApp);
 });
 

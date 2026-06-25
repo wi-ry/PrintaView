@@ -7,14 +7,21 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
+    "test": "npm run test:unit",
+    "test:unit": "node --test test/*.test.js",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:all": "npm run test:unit && npm run test:e2e",
     "build:icons": "node build-icons.js",
     "prebuild:win": "npm run build:icons",
     "build:win": "electron-builder --win portable",
     "dist": "electron-builder"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "electron": "^42.5.0",
     "electron-builder": "^26.15.3",
+    "playwright": "^1.61.1",
     "sharp": "^0.35.2"
   },
   "build": {
@@ -37,5 +44,8 @@
       ],
       "artifactName": "${productName}-${version}-Portable.${ext}"
     }
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.0.227"
   }
 }

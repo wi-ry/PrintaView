@@ -4,12 +4,26 @@ const paneLeftBtn = document.getElementById('pane-left-btn');
 const paneRightBtn = document.getElementById('pane-right-btn');
 const hiddenItemsList = document.getElementById('hidden-items-list');
 const clearAllHiddenBtn = document.getElementById('clear-all-hidden');
+const saveBtn = document.getElementById('save-btn');
+const cancelBtn = document.getElementById('cancel-btn');
 
 let currentPanePosition = 'right';
+let pendingClearedHiddenItems = false;
+let originalSettings = {};
+
+// Track pending changes (not saved yet)
+let pendingSettings = {
+  showDetailsPane: true,
+  showHidden: false,
+  panePosition: 'right'
+};
 
 // Sync with main window
 async function syncSettings() {
   const settings = await window.printaViewApi.getSettings();
+  
+  originalSettings = { ...settings };
+  pendingSettings = { ...settings };
   
   showDetailsPaneCheckbox.checked = settings.showDetailsPane;
   showHiddenToggle.checked = settings.showHidden;
@@ -53,47 +67,45 @@ async function updateHiddenItemsList() {
   });
 }
 
-showDetailsPaneCheckbox.addEventListener('change', async () => {
-  await window.printaViewApi.saveSettings({
-    showDetailsPane: showDetailsPaneCheckbox.checked,
-    showHidden: showHiddenToggle.checked,
-    panePosition: currentPanePosition
-  });
+// Track changes without saving immediately
+showDetailsPaneCheckbox.addEventListener('change', () => {
+  pendingSettings.showDetailsPane = showDetailsPaneCheckbox.checked;
 });
 
-showHiddenToggle.addEventListener('change', async () => {
-  await window.printaViewApi.saveSettings({
-    showDetailsPane: showDetailsPaneCheckbox.checked,
-    showHidden: showHiddenToggle.checked,
-    panePosition: currentPanePosition
-  });
+showHiddenToggle.addEventListener('change', () => {
+  pendingSettings.showHidden = showHiddenToggle.checked;
 });
 
-paneLeftBtn.addEventListener('click', async () => {
+paneLeftBtn.addEventListener('click', () => {
   currentPanePosition = 'left';
+  pendingSettings.panePosition = 'left';
   updatePanePositionUI();
-  await window.printaViewApi.saveSettings({
-    showDetailsPane: showDetailsPaneCheckbox.checked,
-    showHidden: showHiddenToggle.checked,
-    panePosition: currentPanePosition
-  });
 });
 
-paneRightBtn.addEventListener('click', async () => {
+paneRightBtn.addEventListener('click', () => {
   currentPanePosition = 'right';
+  pendingSettings.panePosition = 'right';
   updatePanePositionUI();
-  await window.printaViewApi.saveSettings({
-    showDetailsPane: showDetailsPaneCheckbox.checked,
-    showHidden: showHiddenToggle.checked,
-    panePosition: currentPanePosition
-  });
 });
 
 clearAllHiddenBtn.addEventListener('click', async () => {
   if (confirm('Clear all hidden items?')) {
     await window.printaViewApi.clearAllHidden();
+    pendingClearedHiddenItems = true;
     await updateHiddenItemsList();
   }
 });
 
+// Save changes
+saveBtn.addEventListener('click', async () => {
+  await window.printaViewApi.saveSettings(pendingSettings);
+  window.close();
+});
+
+// Cancel changes
+cancelBtn.addEventListener('click', () => {
+  window.close();
+});
+
 syncSettings();
+

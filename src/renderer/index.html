@@ -22,11 +22,10 @@
           <label for="size-range">Preview Size</label>
           <input id="size-range" type="range" min="120" max="340" value="190" />
         </div>
-        <div class="toolbar-group toggle-group">
-          <label>
-            <input id="show-hidden" type="checkbox" />
-            Show Hidden
-          </label>
+        <div class="toolbar-group favorites-group" aria-label="Favorites filter">
+          <span>View</span>
+          <button id="favorites-all-button" class="toggle-pill" type="button" aria-pressed="true">All</button>
+          <button id="favorites-only-button" class="toggle-pill" type="button" aria-pressed="false">Favorites</button>
         </div>
         <button id="refresh-button" type="button">Refresh</button>
         <button id="view-menu-button" type="button" title="View Settings">⚙</button>
@@ -71,13 +70,14 @@
 
     <div id="context-menu" class="context-menu hidden">
       <button id="open-item" type="button">Open</button>
+      <button id="reveal-item" type="button">Show in Windows Explorer</button>
+      <div class="menu-divider"></div>
+      <button id="toggle-favorite-item" type="button"></button>
       <div class="menu-divider"></div>
       <button id="toggle-hide-item" type="button"></button>
     </div>
 
-    <div id="view-menu" class="context-menu hidden">
-      <button id="open-settings-btn" type="button">Settings...</button>
-    </div>
+
 
     <template id="card-template">
       <article class="card">
@@ -88,6 +88,7 @@
       </article>
     </template>
 
-    <script src="./renderer.js"></script>
+    <script src="./item-utils.js"></script>
+    <script type="module" src="./renderer.js"></script>
   </body>
 </html>
