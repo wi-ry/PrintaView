@@ -10,7 +10,7 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 
 *Right-click context menu with hide and favorite actions*
 
-![Settings](./images/settings.jpg)
+![Settings](./images/settings.png)
 
 *Settings window, including hidden files toggle*
 
