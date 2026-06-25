@@ -28,6 +28,14 @@
         padding-bottom: 8px;
         border-bottom: 1px solid var(--line);
       }
+      .settings-subheading {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+      }
       .settings-item {
         display: flex;
         align-items: center;
@@ -211,12 +219,6 @@
       <div class="settings-section">
         <div class="settings-section-title">Display</div>
         <div class="settings-item">
-          <label>
-            <input id="show-details-pane" type="checkbox" checked />
-            Show Details Pane
-          </label>
-        </div>
-        <div class="settings-item">
           <div class="theme-options" role="radiogroup" aria-label="Theme">
             <label class="theme-option">
               <input type="radio" name="theme" value="default" checked />
@@ -238,7 +240,14 @@
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-title">Details Pane Position</div>
+        <div class="settings-section-title">Details Pane</div>
+        <div class="settings-item">
+          <label>
+            <input id="show-details-pane" type="checkbox" checked />
+            Show Details Pane
+          </label>
+        </div>
+        <div class="settings-subheading">Position</div>
         <div class="pane-position-toggle">
           <button id="pane-left-btn" class="active">← Left</button>
           <button id="pane-right-btn">Right →</button>
