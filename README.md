@@ -16,18 +16,17 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 
 ## Features
 
-- Unified recursive view of items in `Downloads` and all nested folders.
-- Previews for common image formats (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`) and PDFs.
-- Generic tile preview for other file types.
-- Right-click any file or folder to `Hide`/`Unhide` via app-managed hidden state (does not change Windows hidden attribute).
-- `Show Hidden Files` setting in the Settings window.
-- Favorites support with `Show: All` / `Show: Favorites` toolbar toggle.
-- Sort by:
-  - Name
-  - Type
-  - Most Recently Downloaded
-- Adjustable preview/tile size slider.
-- Double-click any tile to open with the Windows default application.
+- Recursive file browser for your configured root folder (defaults to `Downloads`, with `Browse` to switch).
+- Shows supported files only: images (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`), `pdf`, `doc`, `docx`, `ppt`, and `pptx`.
+- Image thumbnails and generated PDF first-page thumbnails (with page count).
+- Generic type tiles for supported non-image/non-PDF files (for example `docx` and `pptx`).
+- Right-click actions: `Open`, `Show in Windows Explorer`, `Favorite`/`Unfavorite`, and `Hide`/`Unhide`.
+- Favorites workflow with toolbar filter toggle (`All` / `Favorites`).
+- Hidden items are app-managed (do not change the Windows hidden attribute), with `Show Hidden Files`, per-item unhide, and `Clear All Hidden Items` in Settings.
+- Sort options: `Most Recently Downloaded`, `Name`, and `Type` (with expandable type groups).
+- Adjustable preview size slider.
+- Optional details pane with file metadata and configurable left/right pane position.
+- Theme selection (`Default`, `Pastel Pink`, `Baby Blue`) in Settings.
 
 ## Development
 
