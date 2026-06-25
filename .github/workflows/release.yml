@@ -1,0 +1,69 @@
+name: Build and Release Windows EXE
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate tag matches package version
+        id: version
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PKG_VERSION"
+
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag version does not match package.json version"
+            exit 1
+          fi
+
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Windows portable EXE
+        run: npm run build:win
+
+      - name: Verify release file exists
+        id: artifact
+        shell: bash
+        run: |
+          EXE_PATH="release/PrintaView-${{ steps.version.outputs.version }}-Portable.exe"
+          if [ ! -f "$EXE_PATH" ]; then
+            echo "Expected artifact not found: $EXE_PATH"
+            echo "release directory contents:"
+            ls -la release
+            exit 1
+          fi
+
+          echo "exe_path=$EXE_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release and upload EXE
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: PrintaView v${{ steps.version.outputs.version }}
+          files: ${{ steps.artifact.outputs.exe_path }}
+          generate_release_notes: true
