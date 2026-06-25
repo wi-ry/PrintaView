@@ -12,7 +12,8 @@
   },
   "devDependencies": {
     "electron": "^42.5.0",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "sharp": "^0.35.2"
   },
   "build": {
     "appId": "com.printaview.app",
