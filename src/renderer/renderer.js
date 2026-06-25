@@ -8,11 +8,17 @@ const browseButton = document.getElementById('browse-button');
 const contextMenu = document.getElementById('context-menu');
 const toggleHideButton = document.getElementById('toggle-hide-item');
 const cardTemplate = document.getElementById('card-template');
+const viewMenuButton = document.getElementById('view-menu-button');
+const viewMenu = document.getElementById('view-menu');
+const showDetailsPaneCheckbox = document.getElementById('show-details-pane');
+const detailsPanePositionRadios = document.querySelectorAll('input[name="pane-pos"]');
+const detailsPane = document.getElementById('details-pane');
 
 let downloadsPath = '';
 let allItems = [];
 let contextMenuTargetPath = null;
 let contextMenuTargetHidden = false;
+let selectedItemId = null;
 
 function formatDate(value) {
   return new Date(value).toLocaleString();
@@ -72,6 +78,27 @@ function hideContextMenu() {
   contextMenuTargetHidden = false;
 }
 
+function updateDetailsPaneFromItem(item) {
+  document.getElementById('detail-name').textContent = item.name;
+  document.getElementById('detail-type').textContent = item.itemType === 'folder' ? 'Folder' : (item.extension || 'File').toUpperCase();
+  document.getElementById('detail-size').textContent = formatSize(item.size);
+  document.getElementById('detail-modified').textContent = formatDate(item.createdTimeMs || item.modifiedTimeMs);
+  document.getElementById('detail-path').textContent = item.path;
+}
+
+function selectCard(item) {
+  const previousSelected = gridElement.querySelector('.card.selected');
+  if (previousSelected) {
+    previousSelected.classList.remove('selected');
+  }
+  const newSelected = gridElement.querySelector(`[data-item-id="${item.id}"]`);
+  if (newSelected) {
+    newSelected.classList.add('selected');
+  }
+  selectedItemId = item.id;
+  updateDetailsPaneFromItem(item);
+}
+
 async function setItemHidden(path, hidden) {
   await window.printaViewApi.setHidden({ path, hidden });
   await loadItems();
@@ -119,17 +146,19 @@ function renderItems() {
     const card = cardTemplate.content.firstElementChild.cloneNode(true);
     const previewContainer = card.querySelector('.preview');
     const title = card.querySelector('.title');
-    const details = card.querySelector('.details');
 
+    card.setAttribute('data-item-id', item.id);
     previewContainer.replaceWith(buildPreview(item));
 
     title.textContent = item.name;
-    const typeLabel = item.itemType === 'folder' ? 'Folder' : item.extension || 'File';
-    details.textContent = `${typeLabel} - ${formatSize(item.size)} - ${formatDate(item.createdTimeMs || item.modifiedTimeMs)}`;
 
     if (item.hiddenByApp) {
       card.classList.add('hidden-card');
     }
+
+    card.addEventListener('click', () => {
+      selectCard(item);
+    });
 
     card.addEventListener('dblclick', async () => {
       await window.printaViewApi.openItem({ path: item.path });
@@ -169,6 +198,9 @@ async function initialize() {
   downloadsPath = await window.printaViewApi.getDownloadsPath();
   downloadsPathElement.textContent = downloadsPath;
   await loadItems();
+  if (allItems.length > 0) {
+    selectCard(allItems[0]);
+  }
 }
 
 sortSelect.addEventListener('change', renderItems);
@@ -186,6 +218,29 @@ browseButton.addEventListener('click', async () => {
   }
 });
 
+viewMenuButton.addEventListener('click', (e) => {
+  e.stopPropagation();
+  viewMenu.classList.toggle('hidden');
+});
+
+showDetailsPaneCheckbox.addEventListener('change', () => {
+  if (showDetailsPaneCheckbox.checked) {
+    detailsPane.classList.remove('hidden');
+  } else {
+    detailsPane.classList.add('hidden');
+  }
+});
+
+detailsPanePositionRadios.forEach((radio) => {
+  radio.addEventListener('change', () => {
+    if (radio.value === 'left') {
+      detailsPane.classList.add('pane-left');
+    } else {
+      detailsPane.classList.remove('pane-left');
+    }
+  });
+});
+
 toggleHideButton.addEventListener('click', async () => {
   if (!contextMenuTargetPath) {
     return;
@@ -197,11 +252,13 @@ toggleHideButton.addEventListener('click', async () => {
 
 document.addEventListener('click', () => {
   hideContextMenu();
+  viewMenu.classList.add('hidden');
 });
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     hideContextMenu();
+    viewMenu.classList.add('hidden');
   }
 });
 
