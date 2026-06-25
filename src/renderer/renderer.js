@@ -37,6 +37,10 @@ const imageCache = new Map();
 const pdfThumbnailCache = new Map();
 const pdfThumbnailInFlight = new Map();
 
+function getPdfCacheToken(item) {
+  return `${item.path.toLowerCase()}|${Number(item.modifiedTimeMs) || 0}|${Number(item.size) || 0}`;
+}
+
 function cachePreview(filePath, dataUrl) {
   imageCache.set(filePath, dataUrl);
 }
@@ -45,19 +49,35 @@ function getCachedPreview(filePath) {
   return imageCache.get(filePath);
 }
 
-async function getPdfThumbnailData(filePath) {
-  const cached = pdfThumbnailCache.get(filePath);
+async function getPdfThumbnailData(item) {
+  const cacheToken = getPdfCacheToken(item);
+  const cached = pdfThumbnailCache.get(cacheToken);
   if (cached) {
     return cached;
   }
 
-  const inFlight = pdfThumbnailInFlight.get(filePath);
+  const inFlight = pdfThumbnailInFlight.get(cacheToken);
   if (inFlight) {
     return inFlight;
   }
 
   const generationTask = (async () => {
-    const loadingTask = pdfjsLib.getDocument({ url: toFileUrl(filePath) });
+    const diskCacheResult = await window.printaViewApi.getPdfCache({
+      path: item.path,
+      modifiedTimeMs: item.modifiedTimeMs,
+      size: item.size
+    });
+
+    if (diskCacheResult?.ok && diskCacheResult.imagePath) {
+      const cachedData = {
+        dataUrl: toFileUrl(diskCacheResult.imagePath),
+        pageCount: Number(diskCacheResult.pageCount) || 0
+      };
+      pdfThumbnailCache.set(cacheToken, cachedData);
+      return cachedData;
+    }
+
+    const loadingTask = pdfjsLib.getDocument({ url: toFileUrl(item.path) });
     const pdf = await loadingTask.promise;
 
     try {
@@ -79,7 +99,19 @@ async function getPdfThumbnailData(filePath) {
         dataUrl,
         pageCount: pdf.numPages
       };
-      pdfThumbnailCache.set(filePath, thumbnailData);
+
+      pdfThumbnailCache.set(cacheToken, thumbnailData);
+
+      window.printaViewApi.setPdfCache({
+        path: item.path,
+        modifiedTimeMs: item.modifiedTimeMs,
+        size: item.size,
+        dataUrl,
+        pageCount: thumbnailData.pageCount
+      }).catch(() => {
+        // Ignore cache write errors to avoid impacting preview rendering.
+      });
+
       return thumbnailData;
     } finally {
       pdf.cleanup();
@@ -87,10 +119,10 @@ async function getPdfThumbnailData(filePath) {
     }
   })()
     .finally(() => {
-      pdfThumbnailInFlight.delete(filePath);
+      pdfThumbnailInFlight.delete(cacheToken);
     });
 
-  pdfThumbnailInFlight.set(filePath, generationTask);
+  pdfThumbnailInFlight.set(cacheToken, generationTask);
   return generationTask;
 }
 
@@ -288,7 +320,7 @@ function buildPreview(item) {
     pdfThumb.appendChild(pdfHint);
     pdfThumb.appendChild(pdfPageCount);
 
-    getPdfThumbnailData(item.path)
+    getPdfThumbnailData(item)
       .then((thumbnailData) => {
         pdfImage.src = thumbnailData.dataUrl;
         pdfThumb.classList.add('has-image');

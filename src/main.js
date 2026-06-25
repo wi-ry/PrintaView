@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const crypto = require('crypto');
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
 
 let mainWindow;
@@ -11,6 +12,11 @@ const APP_DATA_FOLDER = 'PrintaView';
 const SETTINGS_FILE_NAME = 'printaview-settings.json';
 const HIDDEN_FILE_NAME = 'hidden-items.json';
 const FAVORITES_FILE_NAME = 'favorite-items.json';
+const PDF_CACHE_DIR_NAME = 'pdf-cache';
+const PDF_CACHE_CLEANUP_COOLDOWN_MS = 10 * 60 * 1000;
+
+let pdfCacheCleanupInProgress = false;
+let lastPdfCacheCleanupAtMs = 0;
 
 function getStableDataDirectory() {
   const overrideDataDir = process.env.PRINTAVIEW_DATA_DIR;
@@ -69,6 +75,119 @@ function getHiddenStorePath() {
 
 function getFavoritesStorePath() {
   return path.join(ensureDataDirectory(), FAVORITES_FILE_NAME);
+}
+
+function getPdfCacheDirectory() {
+  const cacheDir = path.join(ensureDataDirectory(), PDF_CACHE_DIR_NAME);
+  fs.mkdirSync(cacheDir, { recursive: true });
+  return cacheDir;
+}
+
+function getPdfCacheKey(payload = {}) {
+  const inputPath = typeof payload.path === 'string' ? payload.path : '';
+  const modifiedTimeMs = Number(payload.modifiedTimeMs) || 0;
+  const size = Number(payload.size) || 0;
+  const hashInput = `${normalizePathForKey(inputPath)}|${modifiedTimeMs}|${size}`;
+  return crypto.createHash('sha1').update(hashInput).digest('hex');
+}
+
+function getPdfCachePaths(cacheKey) {
+  const base = path.join(getPdfCacheDirectory(), cacheKey);
+  return {
+    imagePath: `${base}.jpg`,
+    metadataPath: `${base}.json`
+  };
+}
+
+function parseImageDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string') {
+    return null;
+  }
+
+  const match = /^data:image\/jpeg;base64,(.+)$/i.exec(dataUrl);
+  if (!match) {
+    return null;
+  }
+
+  try {
+    return Buffer.from(match[1], 'base64');
+  } catch (error) {
+    return null;
+  }
+}
+
+function isPdfCacheEntryStale(metadata) {
+  if (!metadata || typeof metadata !== 'object') {
+    return true;
+  }
+
+  const sourcePath = metadata.sourcePath;
+  if (!sourcePath || typeof sourcePath !== 'string') {
+    return true;
+  }
+
+  if (!fs.existsSync(sourcePath)) {
+    return true;
+  }
+
+  try {
+    const stats = fs.statSync(sourcePath);
+    const expectedSize = Number(metadata.sourceSize) || 0;
+    const expectedModified = Number(metadata.sourceModifiedTimeMs) || 0;
+    const changedSize = Number(stats.size) !== expectedSize;
+    const changedModified = Math.floor(Number(stats.mtimeMs) || 0) !== Math.floor(expectedModified);
+    return changedSize || changedModified;
+  } catch (error) {
+    return true;
+  }
+}
+
+async function cleanupPdfCacheIfDue() {
+  const now = Date.now();
+  if (pdfCacheCleanupInProgress) {
+    return;
+  }
+
+  if (now - lastPdfCacheCleanupAtMs < PDF_CACHE_CLEANUP_COOLDOWN_MS) {
+    return;
+  }
+
+  pdfCacheCleanupInProgress = true;
+
+  try {
+    const cacheDir = getPdfCacheDirectory();
+    const entries = await fs.promises.readdir(cacheDir);
+    const metadataFiles = entries.filter((file) => file.endsWith('.json'));
+
+    for (const metadataFile of metadataFiles) {
+      const metadataPath = path.join(cacheDir, metadataFile);
+      const imagePath = metadataPath.replace(/\.json$/i, '.jpg');
+
+      let stale = true;
+      try {
+        const raw = await fs.promises.readFile(metadataPath, 'utf8');
+        const metadata = JSON.parse(raw);
+        stale = isPdfCacheEntryStale(metadata);
+      } catch (error) {
+        stale = true;
+      }
+
+      if (!stale) {
+        continue;
+      }
+
+      await Promise.all([
+        fs.promises.rm(metadataPath, { force: true }),
+        fs.promises.rm(imagePath, { force: true })
+      ]);
+    }
+
+    lastPdfCacheCleanupAtMs = now;
+  } catch (error) {
+    // Ignore cleanup errors. Cache cleanup should never block app behavior.
+  } finally {
+    pdfCacheCleanupInProgress = false;
+  }
 }
 
 function loadCustomRootFolder() {
@@ -395,6 +514,7 @@ ipcMain.handle('items:scan', async (_event, payload = {}) => {
   const includeHidden = Boolean(payload.includeHidden);
   const hiddenSet = loadHiddenPaths();
   const favoriteSet = loadFavoritePaths();
+  cleanupPdfCacheIfDue();
   return walkDirectoryRecursive(downloadsPath, hiddenSet, favoriteSet, includeHidden);
 });
 
@@ -466,6 +586,70 @@ ipcMain.handle('items:setFavorite', (_event, payload = {}) => {
 
   saveFavoritePaths(favoriteSet);
   return { ok: true };
+});
+
+ipcMain.handle('pdfcache:get', (_event, payload = {}) => {
+  const inputPath = payload.path;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  const cacheKey = getPdfCacheKey(payload);
+  const { imagePath, metadataPath } = getPdfCachePaths(cacheKey);
+
+  if (!fs.existsSync(imagePath) || !fs.existsSync(metadataPath)) {
+    return { ok: false, message: 'Cache miss.' };
+  }
+
+  try {
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    const pageCount = Number(metadata.pageCount) || 0;
+    if (isPdfCacheEntryStale(metadata)) {
+      fs.rmSync(metadataPath, { force: true });
+      fs.rmSync(imagePath, { force: true });
+      return { ok: false, message: 'Cache stale.' };
+    }
+    return { ok: true, imagePath, pageCount };
+  } catch (error) {
+    return { ok: false, message: 'Cache read failed.' };
+  }
+});
+
+ipcMain.handle('pdfcache:set', (_event, payload = {}) => {
+  const inputPath = payload.path;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  const imageBuffer = parseImageDataUrl(payload.dataUrl);
+  if (!imageBuffer) {
+    return { ok: false, message: 'Invalid image data.' };
+  }
+
+  const cacheKey = getPdfCacheKey(payload);
+  const { imagePath, metadataPath } = getPdfCachePaths(cacheKey);
+
+  try {
+    fs.writeFileSync(imagePath, imageBuffer);
+    fs.writeFileSync(
+      metadataPath,
+      JSON.stringify(
+        {
+          pageCount: Number(payload.pageCount) || 0,
+          sourcePath: payload.path,
+          sourceModifiedTimeMs: Number(payload.modifiedTimeMs) || 0,
+          sourceSize: Number(payload.size) || 0,
+          savedAtMs: Date.now()
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: 'Cache write failed.' };
+  }
 });
 
 ipcMain.handle('settings:get', () => {
