@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PrintaView</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="toolbar">
+        <div class="brand">PrintaView</div>
+        <div class="toolbar-group">
+          <label for="sort-select">Sort</label>
+          <select id="sort-select">
+            <option value="recent">Most Recently Downloaded</option>
+            <option value="name">Name</option>
+            <option value="type">Type</option>
+          </select>
+        </div>
+        <div class="toolbar-group size-group">
+          <label for="size-range">Preview Size</label>
+          <input id="size-range" type="range" min="120" max="340" value="190" />
+        </div>
+        <div class="toolbar-group toggle-group">
+          <label>
+            <input id="show-hidden" type="checkbox" />
+            Show Hidden
+          </label>
+        </div>
+        <div class="toolbar-group menu-group">
+          <button id="view-menu-button" type="button">View</button>
+          <div id="view-menu" class="dropdown-menu hidden">
+            <label class="menu-item">
+              <input id="show-details-pane" type="checkbox" checked />
+              Show Details Pane
+            </label>
+            <div class="menu-divider"></div>
+            <label class="menu-item">
+              <input id="details-pane-position" type="radio" name="pane-pos" value="right" checked />
+              Details on Right
+            </label>
+            <label class="menu-item">
+              <input id="details-pane-position" type="radio" name="pane-pos" value="left" />
+              Details on Left
+            </label>
+          </div>
+        </div>
+        <button id="refresh-button" type="button">Refresh</button>
+      </header>
+      <div class="path-row">
+        <span id="downloads-path" class="path-value"></span>
+        <button id="browse-button" type="button" class="browse-btn">Browse</button>
+      </div>
+      <div class="content-wrapper">
+        <main id="main-content">
+          <section id="grid" class="grid"></section>
+        </main>
+        <aside id="details-pane" class="details-pane">
+          <div class="details-header">
+            <h2>File Details</h2>
+          </div>
+          <div class="details-content">
+            <div class="detail-item">
+              <span class="detail-label">Name:</span>
+              <span id="detail-name" class="detail-value">—</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Type:</span>
+              <span id="detail-type" class="detail-value">—</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Size:</span>
+              <span id="detail-size" class="detail-value">—</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Modified:</span>
+              <span id="detail-modified" class="detail-value">—</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Path:</span>
+              <span id="detail-path" class="detail-value path">—</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div id="context-menu" class="context-menu hidden">
+      <button id="toggle-hide-item" type="button"></button>
+    </div>
+
+    <template id="card-template">
+      <article class="card">
+        <div class="preview"></div>
+        <div class="meta">
+          <h3 class="title"></h3>
+          <p class="details"></p>
+        </div>
+      </article>
+    </template>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>

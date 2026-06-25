@@ -1,0 +1,35 @@
+{
+  "name": "printaview",
+  "version": "1.0.0",
+  "description": "Unified Downloads preview app for Windows",
+  "main": "src/main.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win portable -c.win.signAndEditExecutable=false",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.printaview.app",
+    "productName": "PrintaView",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "portable"
+      ],
+      "artifactName": "${productName}-${version}-Portable.${ext}"
+    }
+  }
+}
