@@ -2,6 +2,18 @@
 
 PrintaView is a standalone Windows desktop app for browsing and previewing files from your Downloads folder in one unified view (including all subfolders).
 
+![App](./images/app.jpg)
+
+*Main application view*
+
+![Right-click Menu](./images/rightclick.jpg)
+
+*Right-click context menu with hide and favorite actions*
+
+![Settings](./images/settings.jpg)
+
+*Settings window, including hidden files toggle*
+
 ## Features
 
 - Unified recursive view of items in `Downloads` and all nested folders.
