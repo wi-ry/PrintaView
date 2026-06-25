@@ -1,9 +1,10 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
 
 let mainWindow;
+let settingsWindow;
 
 function getSettingsPath() {
   return path.join(app.getPath('userData'), 'printaview-settings.json');
@@ -40,6 +41,39 @@ function saveCustomRootFolder(folderPath) {
   settings.customRootFolder = folderPath;
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+}
+
+function loadSettings() {
+  const settingsPath = getSettingsPath();
+  if (!fs.existsSync(settingsPath)) {
+    return { showDetailsPane: true, showHidden: false, panePosition: 'right' };
+  }
+  try {
+    const raw = fs.readFileSync(settingsPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return {
+      showDetailsPane: parsed.showDetailsPane !== false,
+      showHidden: parsed.showHidden === true,
+      panePosition: parsed.panePosition || 'right'
+    };
+  } catch (error) {
+    return { showDetailsPane: true, showHidden: false, panePosition: 'right' };
+  }
+}
+
+function saveSettings(settings) {
+  const settingsPath = getSettingsPath();
+  let existing = {};
+  if (fs.existsSync(settingsPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    } catch (error) {
+      existing = {};
+    }
+  }
+  const updated = { ...existing, ...settings };
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, JSON.stringify(updated, null, 2), 'utf8');
 }
 
 function getRootFolder() {
@@ -189,6 +223,36 @@ function createMainWindow() {
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
+function createSettingsWindow() {
+  if (settingsWindow) {
+    settingsWindow.focus();
+    return;
+  }
+
+  settingsWindow = new BrowserWindow({
+    width: 400,
+    height: 600,
+    minWidth: 350,
+    minHeight: 400,
+    title: 'Settings - PrintaView',
+    backgroundColor: '#f5f2ea',
+    parent: mainWindow,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+
+  settingsWindow.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+}
+
 ipcMain.handle('downloads:getPath', () => {
   return getRootFolder();
 });
@@ -256,7 +320,33 @@ ipcMain.handle('items:open', async (_event, payload = {}) => {
   return { ok: true };
 });
 
+ipcMain.handle('settings:get', () => {
+  return loadSettings();
+});
+
+ipcMain.handle('settings:save', (_event, payload = {}) => {
+  saveSettings(payload);
+  return { ok: true };
+});
+
+ipcMain.handle('hidden:getItems', async (_event, payload = {}) => {
+  const downloadsPath = payload.downloadsPath || getRootFolder();
+  const hiddenSet = loadHiddenPaths();
+  const items = await walkDirectoryRecursive(downloadsPath, hiddenSet, true);
+  return items.filter((item) => item.hiddenByApp);
+});
+
+ipcMain.handle('hidden:clearAll', () => {
+  saveHiddenPaths(new Set());
+  return { ok: true };
+});
+
+ipcMain.on('settings:open', () => {
+  createSettingsWindow();
+});
+
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   createMainWindow();
 
   app.on('activate', () => {

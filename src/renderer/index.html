@@ -29,6 +29,7 @@
           </label>
         </div>
         <button id="refresh-button" type="button">Refresh</button>
+        <button id="view-menu-button" type="button" title="View Settings">⚙</button>
       </header>
       <div class="path-row">
         <span id="downloads-path" class="path-value"></span>
@@ -69,23 +70,13 @@
     </div>
 
     <div id="context-menu" class="context-menu hidden">
+      <button id="open-item" type="button">Open</button>
+      <div class="menu-divider"></div>
       <button id="toggle-hide-item" type="button"></button>
     </div>
 
     <div id="view-menu" class="context-menu hidden">
-      <label class="menu-item">
-        <input id="show-details-pane" type="checkbox" checked />
-        Show Details Pane
-      </label>
-      <div class="menu-divider"></div>
-      <label class="menu-item">
-        <input id="details-pane-position" type="radio" name="pane-pos" value="right" checked />
-        Details on Right
-      </label>
-      <label class="menu-item">
-        <input id="details-pane-position" type="radio" name="pane-pos" value="left" />
-        Details on Left
-      </label>
+      <button id="open-settings-btn" type="button">Settings...</button>
     </div>
 
     <template id="card-template">

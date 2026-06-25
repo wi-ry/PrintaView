@@ -2,15 +2,15 @@ const gridElement = document.getElementById('grid');
 const downloadsPathElement = document.getElementById('downloads-path');
 const sortSelect = document.getElementById('sort-select');
 const sizeRange = document.getElementById('size-range');
-const showHiddenToggle = document.getElementById('show-hidden');
 const refreshButton = document.getElementById('refresh-button');
 const browseButton = document.getElementById('browse-button');
 const contextMenu = document.getElementById('context-menu');
+const openItemButton = document.getElementById('open-item');
 const toggleHideButton = document.getElementById('toggle-hide-item');
 const cardTemplate = document.getElementById('card-template');
 const viewMenu = document.getElementById('view-menu');
-const showDetailsPaneCheckbox = document.getElementById('show-details-pane');
-const detailsPanePositionRadios = document.querySelectorAll('input[name="pane-pos"]');
+const viewMenuButton = document.getElementById('view-menu-button');
+const openSettingsBtn = document.getElementById('open-settings-btn');
 const detailsPane = document.getElementById('details-pane');
 
 let downloadsPath = '';
@@ -18,6 +18,8 @@ let allItems = [];
 let contextMenuTargetPath = null;
 let contextMenuTargetHidden = false;
 let selectedItemId = null;
+let showHiddenFiles = false;
+let currentPanePosition = 'right';
 
 // Image caching and lazy loading
 const imageCache = new Map();
@@ -240,35 +242,53 @@ function renderItems() {
 }
 
 async function loadItems() {
-  const includeHidden = showHiddenToggle.checked;
-  const scanned = await window.printaViewApi.scanItems({ downloadsPath, includeHidden });
-  const blockedExts = new Set(['.mkv', '.rtf']);
+  const scanned = await window.printaViewApi.scanItems({ downloadsPath, includeHidden: showHiddenFiles });
+  
+  // Supported image and document types
+  const supportedExts = new Set([
+    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.tif', '.tiff', '.ico',
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'
+  ]);
+  
   allItems = scanned.filter((item) => {
     if (item.itemType === 'folder') {
       return false;
     }
-    if (blockedExts.has(item.extension)) {
-      return false;
-    }
-    return true;
+    const ext = item.extension.toLowerCase();
+    return supportedExts.has(ext);
   });
+  
   renderItems();
 }
 
 async function initialize() {
   downloadsPath = await window.printaViewApi.getDownloadsPath();
   downloadsPathElement.textContent = downloadsPath;
+  
+  const settings = await window.printaViewApi.getSettings();
+  showHiddenFiles = settings.showHidden;
+  currentPanePosition = settings.panePosition;
+  
+  if (!settings.showDetailsPane) {
+    detailsPane.classList.add('hidden');
+  }
+  
+  if (currentPanePosition === 'left') {
+    detailsPane.classList.add('pane-left');
+  }
+  
   await loadItems();
   if (allItems.length > 0) {
     selectCard(allItems[0]);
   }
 }
 
-sortSelect.addEventListener('change', renderItems);
+// Settings moved to Settings window
+
+initialize();
 sizeRange.addEventListener('input', () => {
   document.documentElement.style.setProperty('--preview-size', `${sizeRange.value}px`);
 });
-showHiddenToggle.addEventListener('change', loadItems);
 refreshButton.addEventListener('click', loadItems);
 browseButton.addEventListener('click', async () => {
   const result = await window.printaViewApi.browseFolders();
@@ -287,23 +307,11 @@ document.querySelector('.toolbar').addEventListener('contextmenu', (event) => {
   viewMenu.classList.remove('hidden');
 });
 
-showDetailsPaneCheckbox.addEventListener('change', () => {
-  if (showDetailsPaneCheckbox.checked) {
-    detailsPane.classList.remove('hidden');
-  } else {
-    detailsPane.classList.add('hidden');
-  }
+openSettingsBtn.addEventListener('click', () => {
+  window.printaViewApi.openSettings();
 });
 
-detailsPanePositionRadios.forEach((radio) => {
-  radio.addEventListener('change', () => {
-    if (radio.value === 'left') {
-      detailsPane.classList.add('pane-left');
-    } else {
-      detailsPane.classList.remove('pane-left');
-    }
-  });
-});
+// Settings moved to Settings window - old handlers removed
 
 toggleHideButton.addEventListener('click', async () => {
   if (!contextMenuTargetPath) {
@@ -312,6 +320,25 @@ toggleHideButton.addEventListener('click', async () => {
 
   await setItemHidden(contextMenuTargetPath, !contextMenuTargetHidden);
   hideContextMenu();
+});
+
+openItemButton.addEventListener('click', async () => {
+  if (!contextMenuTargetPath) {
+    return;
+  }
+
+  await window.printaViewApi.openItem({ path: contextMenuTargetPath });
+  hideContextMenu();
+});
+
+// Show View menu on button click
+viewMenuButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  const rect = viewMenuButton.getBoundingClientRect();
+  // Open to the left of the button
+  viewMenu.style.left = `${rect.left - viewMenu.offsetWidth}px`;
+  viewMenu.style.top = `${rect.bottom + 4}px`;
+  viewMenu.classList.remove('hidden');
 });
 
 document.addEventListener('click', () => {
@@ -325,5 +352,29 @@ document.addEventListener('keydown', (event) => {
     viewMenu.classList.add('hidden');
   }
 });
+
+async function initialize() {
+  downloadsPath = await window.printaViewApi.getDownloadsPath();
+  downloadsPathElement.textContent = downloadsPath;
+  
+  const settings = await window.printaViewApi.getSettings();
+  showHiddenFiles = settings.showHidden;
+  currentPanePosition = settings.panePosition;
+  
+  if (!settings.showDetailsPane) {
+    detailsPane.classList.add('hidden');
+  }
+  
+  if (currentPanePosition === 'left') {
+    detailsPane.classList.add('pane-left');
+  }
+  
+  await loadItems();
+  if (allItems.length > 0) {
+    selectCard(allItems[0]);
+  }
+}
+
+// Settings moved to Settings window
 
 initialize();
