@@ -28,24 +28,6 @@
             Show Hidden
           </label>
         </div>
-        <div class="toolbar-group menu-group">
-          <button id="view-menu-button" type="button">View</button>
-          <div id="view-menu" class="dropdown-menu hidden">
-            <label class="menu-item">
-              <input id="show-details-pane" type="checkbox" checked />
-              Show Details Pane
-            </label>
-            <div class="menu-divider"></div>
-            <label class="menu-item">
-              <input id="details-pane-position" type="radio" name="pane-pos" value="right" checked />
-              Details on Right
-            </label>
-            <label class="menu-item">
-              <input id="details-pane-position" type="radio" name="pane-pos" value="left" />
-              Details on Left
-            </label>
-          </div>
-        </div>
         <button id="refresh-button" type="button">Refresh</button>
       </header>
       <div class="path-row">
@@ -90,12 +72,27 @@
       <button id="toggle-hide-item" type="button"></button>
     </div>
 
+    <div id="view-menu" class="context-menu hidden">
+      <label class="menu-item">
+        <input id="show-details-pane" type="checkbox" checked />
+        Show Details Pane
+      </label>
+      <div class="menu-divider"></div>
+      <label class="menu-item">
+        <input id="details-pane-position" type="radio" name="pane-pos" value="right" checked />
+        Details on Right
+      </label>
+      <label class="menu-item">
+        <input id="details-pane-position" type="radio" name="pane-pos" value="left" />
+        Details on Left
+      </label>
+    </div>
+
     <template id="card-template">
       <article class="card">
         <div class="preview"></div>
         <div class="meta">
           <h3 class="title"></h3>
-          <p class="details"></p>
         </div>
       </article>
     </template>

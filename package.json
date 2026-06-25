@@ -9,7 +9,7 @@
     "start": "electron .",
     "build:icons": "node build-icons.js",
     "prebuild:win": "npm run build:icons",
-    "build:win": "electron-builder --win portable -c.win.signAndEditExecutable=false",
+    "build:win": "electron-builder --win portable",
     "dist": "electron-builder"
   },
   "devDependencies": {
@@ -22,6 +22,7 @@
     "productName": "PrintaView",
     "files": [
       "src/**/*",
+      "build/icon.ico",
       "build/icon.png",
       "package.json"
     ],
@@ -29,8 +30,8 @@
       "output": "release"
     },
     "win": {
-      "icon": "build/icon.png",
-      "signAndEditExecutable": false,
+      "icon": "build/icon.ico",
+      "signExecutable": false,
       "target": [
         "portable"
       ],

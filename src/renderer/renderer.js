@@ -8,7 +8,6 @@ const browseButton = document.getElementById('browse-button');
 const contextMenu = document.getElementById('context-menu');
 const toggleHideButton = document.getElementById('toggle-hide-item');
 const cardTemplate = document.getElementById('card-template');
-const viewMenuButton = document.getElementById('view-menu-button');
 const viewMenu = document.getElementById('view-menu');
 const showDetailsPaneCheckbox = document.getElementById('show-details-pane');
 const detailsPanePositionRadios = document.querySelectorAll('input[name="pane-pos"]');
@@ -19,6 +18,58 @@ let allItems = [];
 let contextMenuTargetPath = null;
 let contextMenuTargetHidden = false;
 let selectedItemId = null;
+
+// Image caching and lazy loading
+const imageCache = new Map();
+const lazyLoadObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      const preview = entry.target;
+      loadPreviewContent(preview);
+      lazyLoadObserver.unobserve(preview);
+    }
+  });
+}, { rootMargin: '50px' });
+
+function cachePreview(filePath, dataUrl) {
+  imageCache.set(filePath, dataUrl);
+}
+
+function getCachedPreview(filePath) {
+  return imageCache.get(filePath);
+}
+
+async function loadPreviewContent(previewElement) {
+  if (previewElement.dataset.loaded === 'true') {
+    return;
+  }
+
+  const itemId = previewElement.closest('.card')?.getAttribute('data-item-id');
+  if (!itemId) return;
+
+  const item = allItems.find((i) => i.id === itemId);
+  if (!item) return;
+
+  if (item.previewType === 'image') {
+    const cached = getCachedPreview(item.path);
+    if (cached) {
+      const img = previewElement.querySelector('img');
+      if (img) img.src = cached;
+      previewElement.dataset.loaded = 'true';
+      return;
+    }
+
+    const img = previewElement.querySelector('img');
+    if (img) {
+      img.onload = () => {
+        cachePreview(item.path, img.src);
+        previewElement.dataset.loaded = 'true';
+      };
+    }
+  } else {
+    previewElement.dataset.loaded = 'true';
+  }
+}
 
 function formatDate(value) {
   return new Date(value).toLocaleString();
@@ -107,11 +158,19 @@ async function setItemHidden(path, hidden) {
 function buildPreview(item) {
   const preview = document.createElement('div');
   preview.className = 'preview';
+  preview.dataset.loaded = 'false';
 
   if (item.previewType === 'image') {
     const image = document.createElement('img');
     image.loading = 'lazy';
-    image.src = toFileUrl(item.path);
+    // Start with a cached version if available
+    const cached = getCachedPreview(item.path);
+    if (cached) {
+      image.src = cached;
+      preview.dataset.loaded = 'true';
+    } else {
+      image.src = toFileUrl(item.path);
+    }
     image.alt = item.name;
     preview.appendChild(image);
     return preview;
@@ -122,6 +181,7 @@ function buildPreview(item) {
     object.data = `${toFileUrl(item.path)}#toolbar=0&navpanes=0`;
     object.type = 'application/pdf';
     preview.appendChild(object);
+    preview.dataset.loaded = 'true';
     return preview;
   }
 
@@ -135,6 +195,7 @@ function buildPreview(item) {
   }
 
   preview.appendChild(text);
+  preview.dataset.loaded = 'true';
   return preview;
 }
 
@@ -218,9 +279,12 @@ browseButton.addEventListener('click', async () => {
   }
 });
 
-viewMenuButton.addEventListener('click', (e) => {
-  e.stopPropagation();
-  viewMenu.classList.toggle('hidden');
+// Show View menu on right-click in toolbar area
+document.querySelector('.toolbar').addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  viewMenu.style.left = `${event.clientX}px`;
+  viewMenu.style.top = `${event.clientY}px`;
+  viewMenu.classList.remove('hidden');
 });
 
 showDetailsPaneCheckbox.addEventListener('change', () => {

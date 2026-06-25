@@ -212,14 +212,26 @@ main {
 .card {
   display: flex;
   flex-direction: column;
-  min-height: calc(var(--preview-size) + 90px);
+  min-height: calc(var(--preview-size) + 40px);
+  height: calc(var(--preview-size) + 40px);
   border-radius: 16px;
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow);
   overflow: hidden;
-  cursor: default;
+  cursor: pointer;
   animation: rise 240ms ease-out both;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(48, 42, 30, 0.18);
+}
+
+.card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-strong), var(--shadow);
 }
 
 .card.hidden-card {
@@ -228,12 +240,14 @@ main {
 
 .preview {
   height: var(--preview-size);
+  width: 100%;
   background: #efe7d4;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .preview img,
@@ -258,49 +272,30 @@ main {
 }
 
 .meta {
-  padding: 10px 12px;
+  padding: 8px 10px;
+  text-align: center;
+  flex: 1;
+  overflow: hidden;
 }
 
 .title {
   margin: 0;
-  font-size: 0.93rem;
-  line-height: 1.3;
+  font-size: 0.85rem;
+  line-height: 1.2;
   word-break: break-word;
-}
-
-.details {
-  margin: 6px 0 0;
-  font-size: 0.8rem;
-  color: var(--ink-soft);
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menu-group {
   position: relative;
 }
 
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  min-width: 180px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: var(--shadow);
-  padding: 6px;
-  margin-top: 6px;
-  z-index: 50;
-}
-
-.dropdown-menu.hidden {
-  display: none;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+.dropding: 8px 10px;
   cursor: pointer;
   border-radius: 6px;
   font-size: 0.9rem;
