@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const sharp = require('sharp');
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
 
 let mainWindow;
@@ -368,7 +369,7 @@ function categorizeFile(filePath, isDirectory) {
   }
 
   const ext = path.extname(filePath).toLowerCase();
-  const imageExts = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp', '.tif', '.tiff', '.ico']);
+  const imageExts = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp', '.ico']);
 
   if (imageExts.has(ext)) {
     return { itemType: 'file', previewType: 'image' };
@@ -376,6 +377,10 @@ function categorizeFile(filePath, isDirectory) {
 
   if (ext === '.pdf') {
     return { itemType: 'file', previewType: 'pdf' };
+  }
+
+  if (ext === '.tif' || ext === '.tiff') {
+    return { itemType: 'file', previewType: 'tiff' };
   }
 
   return { itemType: 'file', previewType: 'generic' };
@@ -435,8 +440,17 @@ async function walkDirectoryRecursive(rootDir, hiddenSet, favoriteSet, includeHi
   return allItems;
 }
 
+function getAppIconPath() {
+  const iconPath = path.join(app.getAppPath(), 'images', 'icon.ico');
+  if (fs.existsSync(iconPath)) {
+    return iconPath;
+  }
+  return null;
+}
+
 function createMainWindow() {
-  mainWindow = new BrowserWindow({
+  const iconPath = getAppIconPath();
+  const config = {
     width: 1400,
     height: 900,
     minWidth: 1000,
@@ -449,7 +463,13 @@ function createMainWindow() {
       nodeIntegration: false,
       sandbox: true
     }
-  });
+  };
+  
+  if (iconPath) {
+    config.icon = iconPath;
+  }
+  
+  mainWindow = new BrowserWindow(config);
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
@@ -460,7 +480,8 @@ function createSettingsWindow() {
     return;
   }
 
-  settingsWindow = new BrowserWindow({
+  const iconPath = getAppIconPath();
+  const config = {
     width: 400,
     height: 600,
     minWidth: 350,
@@ -475,7 +496,13 @@ function createSettingsWindow() {
       nodeIntegration: false,
       sandbox: true
     }
-  });
+  };
+  
+  if (iconPath) {
+    config.icon = iconPath;
+  }
+  
+  settingsWindow = new BrowserWindow(config);
 
   settingsWindow.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
 
@@ -672,6 +699,29 @@ ipcMain.handle('hidden:getItems', async (_event, payload = {}) => {
 ipcMain.handle('hidden:clearAll', () => {
   saveHiddenPaths(new Set());
   return { ok: true };
+});
+
+ipcMain.handle('tiff:getPreview', async (_event, payload = {}) => {
+  const inputPath = payload.path;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  try {
+    // Use sharp to read TIFF and convert to PNG preview
+    const buffer = await sharp(inputPath)
+      .resize(300, 300, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .png()
+      .toBuffer();
+
+    const dataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
+    return { ok: true, dataUrl };
+  } catch (error) {
+    return { ok: false, message: `Failed to generate TIFF preview: ${error.message}` };
+  }
 });
 
 ipcMain.on('settings:open', () => {

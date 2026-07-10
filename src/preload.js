@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('printaViewApi', {
   revealItem: (payload) => ipcRenderer.invoke('items:reveal', payload),
   getPdfCache: (payload) => ipcRenderer.invoke('pdfcache:get', payload),
   setPdfCache: (payload) => ipcRenderer.invoke('pdfcache:set', payload),
+  getTiffPreview: (path) => ipcRenderer.invoke('tiff:getPreview', { path }),
   browseFolders: () => ipcRenderer.invoke('folder:browse'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (payload) => ipcRenderer.invoke('settings:save', payload),

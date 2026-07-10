@@ -1,6 +1,6 @@
 {
   "name": "printaview",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Unified Downloads preview app for Windows",
   "main": "src/main.js",
   "author": "",
@@ -12,8 +12,6 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:all": "npm run test:unit && npm run test:e2e",
-    "build:icons": "node build-icons.js",
-    "prebuild:win": "npm run build:icons",
     "build:win": "electron-builder --win portable",
     "dist": "electron-builder"
   },
@@ -22,7 +20,7 @@
     "electron": "^42.5.0",
     "electron-builder": "^26.15.3",
     "playwright": "^1.61.1",
-    "sharp": "^0.35.2"
+    "sharp": "^0.35.3"
   },
   "build": {
     "appId": "com.printaview.app",
@@ -31,8 +29,7 @@
     "asar": true,
     "files": [
       "src/**/*",
-      "build/icon.ico",
-      "build/icon.png",
+      "images/icon.ico",
       "package.json",
       "!**/*.map",
       "!**/*.md",
@@ -43,7 +40,7 @@
       "output": "release"
     },
     "win": {
-      "icon": "build/icon.ico",
+      "icon": "images/icon.ico",
       "signExecutable": false,
       "target": [
         "portable"

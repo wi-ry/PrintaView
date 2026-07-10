@@ -21,6 +21,8 @@ const toggleHideButton = document.getElementById('toggle-hide-item');
 const cardTemplate = document.getElementById('card-template');
 const viewMenuButton = document.getElementById('view-menu-button');
 const detailsPane = document.getElementById('details-pane');
+const searchInput = document.getElementById('search-input');
+const searchClear = document.getElementById('search-clear');
 const itemUtils = window.PrintaViewItemUtils;
 
 let downloadsPath = '';
@@ -31,6 +33,7 @@ let contextMenuTargetFavorite = false;
 let selectedItemId = null;
 let showHiddenFiles = false;
 let showOnlyFavorites = false;
+let searchQuery = '';
 const collapsedTypeGroups = new Set();
 
 const imageCache = new Map();
@@ -168,11 +171,23 @@ function hideContextMenu() {
   contextMenuTargetFavorite = false;
 }
 
+function itemMatchesSearch(item, query) {
+  const q = query.toLowerCase();
+  if (item.name.toLowerCase().includes(q)) return true;
+  if ((item.extension || '').toLowerCase().includes(q)) return true;
+  if (item.path.toLowerCase().includes(q)) return true;
+  return false;
+}
+
 function getVisibleItems() {
-  if (!showOnlyFavorites) {
-    return allItems;
+  let items = allItems;
+  if (showOnlyFavorites) {
+    items = items.filter((item) => item.favoritedByApp);
   }
-  return allItems.filter((item) => item.favoritedByApp);
+  if (searchQuery) {
+    items = items.filter((item) => itemMatchesSearch(item, searchQuery));
+  }
+  return items;
 }
 
 function updateFavoritesToggleUI() {
@@ -288,6 +303,32 @@ function buildPreview(item) {
     } else {
       image.src = toFileUrl(item.path);
       image.onload = () => cachePreview(item.path, image.src);
+    }
+
+    image.alt = item.name;
+    preview.appendChild(image);
+    return preview;
+  }
+
+  if (item.previewType === 'tiff') {
+    const image = document.createElement('img');
+    image.loading = 'lazy';
+    const cached = getCachedPreview(item.path);
+
+    if (cached) {
+      image.src = cached;
+    } else {
+      // Generate TIFF preview via main process
+      window.printaViewApi.getTiffPreview(item.path)
+        .then((result) => {
+          if (result.ok) {
+            image.src = result.dataUrl;
+            cachePreview(item.path, result.dataUrl);
+          }
+        })
+        .catch(() => {
+          // Silent failure - image stays broken
+        });
     }
 
     image.alt = item.name;
@@ -529,6 +570,37 @@ sortSelect.addEventListener('change', () => {
   saveMainViewPreferences();
 });
 
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value.trim();
+    searchClear.hidden = searchQuery === '';
+    renderItems();
+
+    const visibleItems = getVisibleItems();
+    if (visibleItems.length === 0) {
+      selectedItemId = null;
+      clearDetailsPane();
+    } else if (!visibleItems.some((item) => item.id === selectedItemId)) {
+      selectCard(visibleItems[0]);
+    }
+  });
+}
+
+if (searchClear) {
+  searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    searchQuery = '';
+    searchClear.hidden = true;
+    searchInput.focus();
+    renderItems();
+
+    const visibleItems = getVisibleItems();
+    if (visibleItems.length > 0 && !visibleItems.some((item) => item.id === selectedItemId)) {
+      selectCard(visibleItems[0]);
+    }
+  });
+}
+
 function applyFavoritesFilterSelection(onlyFavorites) {
   showOnlyFavorites = onlyFavorites;
   renderItems();
@@ -569,6 +641,11 @@ browseButton.addEventListener('click', async () => {
   if (result.ok) {
     downloadsPath = result.path;
     downloadsPathElement.textContent = downloadsPath;
+    searchQuery = '';
+    if (searchInput) {
+      searchInput.value = '';
+      searchClear.hidden = true;
+    }
     await refreshFromSettings();
   }
 });

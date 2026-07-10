@@ -17,7 +17,7 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 ## Features
 
 - Recursive file browser for your configured root folder (defaults to `Downloads`, with `Browse` to switch).
-- Shows supported files only: images (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`), `pdf`, `doc`, `docx`, `ppt`, and `pptx`.
+- Shows supported files only: images (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`) and `pdf`.
 - Image thumbnails and generated PDF first-page thumbnails (with page count).
 - Generic type tiles for supported non-image/non-PDF files (for example `docx` and `pptx`).
 - Right-click actions: `Open`, `Show in Windows Explorer`, `Favorite`/`Unfavorite`, and `Hide`/`Unhide`.

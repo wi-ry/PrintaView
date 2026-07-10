@@ -110,6 +110,64 @@ body {
   width: 150px;
 }
 
+.search-group {
+  flex: 1;
+  min-width: 160px;
+  max-width: 320px;
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.search-input-wrap input[type="search"] {
+  width: 100%;
+  padding: 7px 30px 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-family: inherit;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.search-input-wrap input[type="search"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(6, 102, 122, 0.15);
+}
+
+.search-input-wrap input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.search-clear:hover {
+  background: var(--line);
+  color: var(--ink);
+  border-color: transparent;
+}
+
 button,
 select,
 input[type="range"] {
@@ -299,7 +357,7 @@ main {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #efe7d4;
+  background: var(--panel);
   color: var(--ink);
   cursor: pointer;
   font-size: 0.84rem;
@@ -393,7 +451,7 @@ main {
 .preview {
   height: var(--preview-size);
   width: 100%;
-  background: #efe7d4;
+  background: var(--panel);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -403,9 +461,11 @@ main {
 }
 
 .preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   border: none;
 }
 
@@ -418,7 +478,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(160deg, #f9edea, #f2ddd7);
+  background: linear-gradient(160deg, var(--panel), var(--surface));
 }
 
 .preview .pdf-thumb-image {
@@ -441,7 +501,7 @@ main {
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #a03624;
+  color: var(--accent-strong);
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
@@ -451,7 +511,7 @@ main {
   position: relative;
   z-index: 1;
   font-size: 0.78rem;
-  color: #7a3f33;
+  color: var(--ink-soft);
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
@@ -466,7 +526,7 @@ main {
   border-radius: 999px;
   font-size: 0.7rem;
   line-height: 1;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
   user-select: none;
   -webkit-user-select: none;
@@ -475,7 +535,7 @@ main {
 
 .preview .pdf-thumb.has-image .pdf-label,
 .preview .pdf-thumb.has-image .pdf-hint {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
   padding: 2px 6px;
   border-radius: 4px;

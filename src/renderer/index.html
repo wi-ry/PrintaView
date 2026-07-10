@@ -22,6 +22,13 @@
           <label for="size-range">Preview Size</label>
           <input id="size-range" type="range" min="120" max="340" value="190" />
         </div>
+        <div class="toolbar-group search-group">
+          <label for="search-input">Search</label>
+          <div class="search-input-wrap">
+            <input id="search-input" type="search" placeholder="Filename, type, path…" autocomplete="off" />
+            <button id="search-clear" type="button" class="search-clear" title="Clear search" hidden>✕</button>
+          </div>
+        </div>
         <div class="toolbar-group favorites-group" aria-label="Favorites filter">
           <span>View</span>
           <button id="favorites-all-button" class="toggle-pill" type="button" aria-pressed="true">All</button>

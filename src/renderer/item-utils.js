@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   const SUPPORTED_EXTENSIONS = Object.freeze([
     '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.tif', '.tiff', '.ico',
-    '.pdf', '.doc', '.docx', '.ppt', '.pptx'
+    '.pdf'
   ]);
 
   const SUPPORTED_EXTENSION_SET = new Set(SUPPORTED_EXTENSIONS);
