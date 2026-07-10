@@ -19,8 +19,7 @@
     "@playwright/test": "^1.61.1",
     "electron": "^42.5.0",
     "electron-builder": "^26.15.3",
-    "playwright": "^1.61.1",
-    "sharp": "^0.35.3"
+    "playwright": "^1.61.1"
   },
   "build": {
     "appId": "com.printaview.app",
@@ -49,6 +48,7 @@
     }
   },
   "dependencies": {
-    "pdfjs-dist": "^6.0.227"
+    "pdfjs-dist": "^6.0.227",
+    "sharp": "^0.35.3"
   }
 }
