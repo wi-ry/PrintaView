@@ -4,8 +4,7 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-
+v1.0.5
 permissions:
   contents: write
 
@@ -43,8 +42,37 @@ jobs:
 
           echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Validate Microsoft Store configuration
+        shell: pwsh
+        env:
+          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+          STORE_ID: ${{ secrets.STORE_ID }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.SECRET_VALUE }}
+        run: |
+          foreach ($name in 'MSIX_IDENTITY_NAME', 'MSIX_PUBLISHER', 'MSIX_PUBLISHER_DISPLAY_NAME', 'STORE_ID', 'TENANT_ID', 'SELLER_ID', 'CLIENT_ID', 'CLIENT_SECRET') {
+            if ([string]::IsNullOrWhiteSpace((Get-Item "env:$name").Value)) {
+              throw "Microsoft Store configuration $name is missing. See the Store release setup instructions in README.md."
+            }
+          }
+
       - name: Build Windows portable EXE
         run: npm run build:win
+
+      - name: Build unpacked Windows app
+        run: npx electron-builder --win dir
+
+      - name: Package unsigned MSIX
+        shell: pwsh
+        env:
+          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: .github/scripts/package-msix.ps1 -Version "${{ steps.version.outputs.version }}"
 
       - name: Verify release file exists
         id: artifact
@@ -59,11 +87,55 @@ jobs:
           fi
 
           echo "exe_path=$EXE_PATH" >> "$GITHUB_OUTPUT"
+          MSIX_PATH="release/msix/PrintaView_${{ steps.version.outputs.version }}.0_x64.msix"
+          if [ ! -f "$MSIX_PATH" ]; then
+            echo "Expected Store package not found: $MSIX_PATH"
+            exit 1
+          fi
+          echo "msix_path=$MSIX_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub release and upload EXE
+      - name: Create GitHub release and upload packages
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: PrintaView v${{ steps.version.outputs.version }}
-          files: ${{ steps.artifact.outputs.exe_path }}
+          files: |
+            ${{ steps.artifact.outputs.exe_path }}
+            ${{ steps.artifact.outputs.msix_path }}
           generate_release_notes: true
+
+      - name: Setup Microsoft Store CLI
+        uses: microsoft/setup-msstore-cli@v1
+
+      - name: Configure Microsoft Store CLI
+        shell: pwsh
+        env:
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.SECRET_VALUE }}
+        run: |
+          msstore reconfigure `
+            --tenantId $env:TENANT_ID `
+            --sellerId $env:SELLER_ID `
+            --clientId $env:CLIENT_ID `
+            --clientSecret $env:CLIENT_SECRET
+          if ($LASTEXITCODE -ne 0) { throw "Microsoft Store CLI configuration failed (exit code $LASTEXITCODE)." }
+
+      - name: Submit package to Microsoft Store
+        shell: pwsh
+        env:
+          STORE_ID: ${{ secrets.STORE_ID }}
+          MSIX_PATH: ${{ steps.artifact.outputs.msix_path }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Invoke-Store {
+            & msstore @args
+            if ($LASTEXITCODE -ne 0) { throw "msstore $($args[0]) failed (exit code $LASTEXITCODE)." }
+          }
+
+          # Upload as a draft first; explicitly commit only after the upload succeeds.
+          Invoke-Store publish $env:MSIX_PATH -id $env:STORE_ID --noCommit -v --uploadTimeout 300
+          Invoke-Store submission publish $env:STORE_ID
+          Invoke-Store submission poll $env:STORE_ID
