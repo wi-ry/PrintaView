@@ -32,6 +32,17 @@ test('sortItems sorts by most recent when sortBy is recent', () => {
   assert.deepEqual(sorted.map((item) => item.name), ['B', 'C', 'A']);
 });
 
+test('sortItems sorts by oldest when sortBy is oldest', () => {
+  const items = [
+    { name: 'A', createdTimeMs: 100 },
+    { name: 'B', createdTimeMs: 300 },
+    { name: 'C', createdTimeMs: 200 }
+  ];
+
+  const sorted = sortItems(items, 'oldest');
+  assert.deepEqual(sorted.map((item) => item.name), ['A', 'C', 'B']);
+});
+
 test('sortItems sorts by name alphabetically', () => {
   const items = [
     { name: 'zeta' },

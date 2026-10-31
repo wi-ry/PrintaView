@@ -1,6 +1,7 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 const { test, expect } = require('@playwright/test');
 const { _electron: electron } = require('playwright');
 
@@ -76,6 +77,8 @@ test('main window loads and settings window opens', async () => {
     await expect(mainWindow.locator('.brand')).toHaveText('PrintaView');
     await expect(mainWindow.locator('#downloads-path')).toHaveText(fixtureRoot);
     await expect(mainWindow.locator('#grid .card').first()).toBeVisible();
+    await expect(mainWindow.locator('#refresh-button img')).toHaveJSProperty('naturalWidth', 64);
+    await expect(mainWindow.locator('#view-menu-button img')).toHaveJSProperty('naturalWidth', 64);
 
     const settingsWindowPromise = electronApp.waitForEvent('window');
     await mainWindow.locator('#view-menu-button').click();
@@ -83,6 +86,34 @@ test('main window loads and settings window opens', async () => {
 
     await expect(settingsWindow).toHaveTitle(/Settings - PrintaView/);
     await settingsWindow.close();
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('file details show raster image dimensions', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  await sharp({
+    create: {
+      width: 48,
+      height: 32,
+      channels: 4,
+      background: '#ff0000'
+    }
+  }).png().toFile(path.join(fixtureRoot, 'dimensions.png'));
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const imageCard = mainWindow.locator('#grid .card').filter({
+      has: mainWindow.locator('.title', { hasText: /^dimensions\.png$/ })
+    });
+
+    await imageCard.click();
+    await expect(mainWindow.locator('#detail-dimensions')).toHaveText('48 × 32 pixels');
   } finally {
     await cleanup();
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -187,6 +218,11 @@ test('name sort orders cards alphabetically', async () => {
 
     await mainWindow.locator('#sort-select').selectOption('name');
     await expect(cards.locator('.title')).toHaveText(['alpha.pdf', 'sample.pdf', 'zeta.pdf']);
+
+    await expect(mainWindow.locator('#sort-select option[value="recent"]')).toHaveText('Newest');
+    await expect(mainWindow.locator('#sort-select option[value="oldest"]')).toHaveText('Oldest');
+    await mainWindow.locator('#sort-select').selectOption('oldest');
+    await expect(mainWindow.locator('#sort-select')).toHaveValue('oldest');
   } finally {
     await cleanup();
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

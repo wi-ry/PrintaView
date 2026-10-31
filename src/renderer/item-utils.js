@@ -33,7 +33,11 @@
       return copy;
     }
 
-    copy.sort((a, b) => (b.createdTimeMs || 0) - (a.createdTimeMs || 0));
+    copy.sort((a, b) => {
+      const timeA = a.createdTimeMs || 0;
+      const timeB = b.createdTimeMs || 0;
+      return sortBy === 'oldest' ? timeA - timeB : timeB - timeA;
+    });
     return copy;
   }
 

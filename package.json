@@ -27,7 +27,7 @@
     "asar": true,
     "files": [
       "src/**/*",
-      "images/icon.ico",
+      "assets/**/*",
       "package.json",
       "!**/*.map",
       "!**/*.md",
@@ -38,7 +38,7 @@
       "output": "release"
     },
     "win": {
-      "icon": "images/icon.ico",
+      "icon": "assets/icon.ico",
       "signExecutable": false,
       "target": [
         "portable"
