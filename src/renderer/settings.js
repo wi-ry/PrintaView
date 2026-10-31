@@ -5,6 +5,7 @@ const paneLeftBtn = document.getElementById('pane-left-btn');
 const paneRightBtn = document.getElementById('pane-right-btn');
 const hiddenItemsList = document.getElementById('hidden-items-list');
 const clearAllHiddenBtn = document.getElementById('clear-all-hidden');
+const settingsTabs = document.querySelectorAll('[role="tab"]');
 const saveBtn = document.getElementById('save-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 
@@ -19,6 +20,43 @@ let pendingSettings = {
   panePosition: 'right',
   theme: 'default'
 };
+
+function activateSettingsTab(tab, moveFocus = false) {
+  settingsTabs.forEach((currentTab) => {
+    const selected = currentTab === tab;
+    currentTab.setAttribute('aria-selected', String(selected));
+    currentTab.tabIndex = selected ? 0 : -1;
+    document.getElementById(currentTab.getAttribute('aria-controls')).hidden = !selected;
+  });
+
+  if (moveFocus) {
+    tab.focus();
+  }
+}
+
+settingsTabs.forEach((tab) => {
+  tab.addEventListener('click', () => activateSettingsTab(tab));
+  tab.addEventListener('keydown', (event) => {
+    const tabs = [...settingsTabs];
+    const currentIndex = tabs.indexOf(tab);
+    let nextIndex;
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % tabs.length;
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = tabs.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    activateSettingsTab(tabs[nextIndex], true);
+  });
+});
 
 function applyTheme(theme) {
   if (!theme || theme === 'default') {
@@ -140,4 +178,3 @@ cancelBtn.addEventListener('click', () => {
 });
 
 syncSettings();
-
