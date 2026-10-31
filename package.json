@@ -10,7 +10,6 @@
     "test": "npm run test:unit",
     "test:unit": "node --test test/*.test.js",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed",
     "test:all": "npm run test:unit && npm run test:e2e",
     "build:win": "electron-builder --win portable",
     "dist": "electron-builder"
