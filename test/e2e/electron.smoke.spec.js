@@ -114,3 +114,81 @@ test('hide action hides selected card from the default view', async () => {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('favorite action filters the grid and can be cleared', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  fs.writeFileSync(path.join(fixtureRoot, 'second.pdf'), '%PDF-1.4\n% second fixture\n', 'utf8');
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const cards = mainWindow.locator('#grid .card');
+    await expect(cards).toHaveCount(2);
+
+    await mainWindow.locator('#grid .card').filter({
+      has: mainWindow.locator('.title', { hasText: /^sample\.pdf$/ })
+    }).click({ button: 'right' });
+    await mainWindow.locator('#toggle-favorite-item').click();
+    await expect(mainWindow.locator('#grid .card.favorite-card')).toHaveCount(1);
+
+    await mainWindow.locator('#favorites-only-button').click();
+    await expect(cards).toHaveCount(1);
+    await expect(cards.locator('.title')).toHaveText(['sample.pdf']);
+
+    await mainWindow.locator('#favorites-all-button').click();
+    await expect(cards).toHaveCount(2);
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('search filters cards and the clear button restores them', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  fs.writeFileSync(path.join(fixtureRoot, 'alpha.pdf'), '%PDF-1.4\n% alpha fixture\n', 'utf8');
+  fs.writeFileSync(path.join(fixtureRoot, 'beta.pdf'), '%PDF-1.4\n% beta fixture\n', 'utf8');
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const cards = mainWindow.locator('#grid .card');
+    await expect(cards).toHaveCount(3);
+
+    await mainWindow.locator('#search-input').fill('alpha');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.locator('.title')).toHaveText(['alpha.pdf']);
+    await expect(mainWindow.locator('#search-clear')).toBeVisible();
+
+    await mainWindow.locator('#search-clear').click();
+    await expect(cards).toHaveCount(3);
+    await expect(mainWindow.locator('#search-input')).toHaveValue('');
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('name sort orders cards alphabetically', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  fs.writeFileSync(path.join(fixtureRoot, 'zeta.pdf'), '%PDF-1.4\n% zeta fixture\n', 'utf8');
+  fs.writeFileSync(path.join(fixtureRoot, 'alpha.pdf'), '%PDF-1.4\n% alpha fixture\n', 'utf8');
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const cards = mainWindow.locator('#grid .card');
+    await expect(cards).toHaveCount(3);
+
+    await mainWindow.locator('#sort-select').selectOption('name');
+    await expect(cards.locator('.title')).toHaveText(['alpha.pdf', 'sample.pdf', 'zeta.pdf']);
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
