@@ -58,7 +58,7 @@ Build output is written to the `release` folder as a portable executable that ca
 
 ## Microsoft Store Release
 
-After the `Test on Main` workflow succeeds, semantic-release analyzes commits on `main`. When they require a release, it automatically updates the package version, creates a `vX.Y.Z` tag and GitHub release, then builds an unsigned MSIX and portable EXE. The portable EXE is attached to the GitHub release, while the MSIX is submitted directly to Microsoft Store and is not published as a release download. The Store signs the package; no signing certificate is needed.
+After the `Test on Main` workflow succeeds, semantic-release analyzes commits on `main`. When they require a release, it automatically updates the package version, creates a `vX.Y.Z` tag and a GitHub release titled `PrintaView vX.Y.Z`, then builds an unsigned MSIX and portable EXE. The portable EXE is attached to the GitHub release, while the MSIX is submitted directly to Microsoft Store and is not published as a release download. The Store signs the package; no signing certificate is needed.
 
 Before the first release:
 
