@@ -235,7 +235,7 @@ function loadSettings() {
   try {
     const raw = fs.readFileSync(settingsPath, 'utf8');
     const parsed = JSON.parse(raw);
-    const allowedSort = new Set(['recent', 'name', 'type']);
+    const allowedSort = new Set(['recent', 'oldest', 'name', 'type']);
     const allowedFavoritesFilter = new Set(['all', 'favorites']);
     const allowedThemes = new Set(['default', 'pastel-pink', 'baby-blue']);
     return {
@@ -441,7 +441,7 @@ async function walkDirectoryRecursive(rootDir, hiddenSet, favoriteSet, includeHi
 }
 
 function getAppIconPath() {
-  const iconPath = path.join(app.getAppPath(), 'images', 'icon.ico');
+  const iconPath = path.join(app.getAppPath(), 'assets', 'icon.ico');
   if (fs.existsSync(iconPath)) {
     return iconPath;
   }
@@ -699,6 +699,24 @@ ipcMain.handle('hidden:getItems', async (_event, payload = {}) => {
 ipcMain.handle('hidden:clearAll', () => {
   saveHiddenPaths(new Set());
   return { ok: true };
+});
+
+ipcMain.handle('image:getDimensions', async (_event, payload = {}) => {
+  const inputPath = payload.path;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  try {
+    const metadata = await sharp(inputPath).metadata();
+    if (!metadata.width || !metadata.height) {
+      return { ok: false, message: 'Image dimensions are unavailable.' };
+    }
+
+    return { ok: true, width: metadata.width, height: metadata.height };
+  } catch (error) {
+    return { ok: false, message: `Failed to read image dimensions: ${error.message}` };
+  }
 });
 
 ipcMain.handle('tiff:getPreview', async (_event, payload = {}) => {

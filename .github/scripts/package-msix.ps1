@@ -39,7 +39,7 @@ Copy-Item (Join-Path $appDir '*') $stageDir -Recurse -Force
 $assetsDir = Join-Path $stageDir 'Assets'
 New-Item -ItemType Directory -Force -Path $assetsDir | Out-Null
 Add-Type -AssemblyName System.Drawing
-$sourceImage = [System.Drawing.Image]::FromFile((Join-Path $repoRoot 'images/icon.png'))
+$sourceImage = [System.Drawing.Image]::FromFile((Join-Path $repoRoot 'assets/icon.png'))
 try {
     foreach ($asset in @(
         @{ Name = 'StoreLogo.png'; Size = 50 },

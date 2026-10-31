@@ -13,7 +13,8 @@
         <div class="toolbar-group">
           <label for="sort-select">Sort</label>
           <select id="sort-select">
-            <option value="recent">Most Recently Downloaded</option>
+            <option value="recent">Newest</option>
+            <option value="oldest">Oldest</option>
             <option value="name">Name</option>
             <option value="type">Type</option>
           </select>
@@ -34,8 +35,12 @@
           <button id="favorites-all-button" class="toggle-pill" type="button" aria-pressed="true">All</button>
           <button id="favorites-only-button" class="toggle-pill" type="button" aria-pressed="false">Favorites</button>
         </div>
-        <button id="refresh-button" type="button">Refresh</button>
-        <button id="view-menu-button" type="button" title="View Settings">⚙</button>
+        <button id="refresh-button" class="icon-button" type="button" title="Refresh" aria-label="Refresh">
+          <img src="../../assets/refresh_icon.png" alt="" aria-hidden="true" />
+        </button>
+        <button id="view-menu-button" class="icon-button" type="button" title="View Settings" aria-label="View Settings">
+          <img src="../../assets/settings_icon.png" alt="" aria-hidden="true" />
+        </button>
       </header>
       <div class="path-row">
         <span id="downloads-path" class="path-value"></span>
@@ -61,6 +66,10 @@
             <div class="detail-item">
               <span class="detail-label">Size:</span>
               <span id="detail-size" class="detail-value">—</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Dimensions:</span>
+              <span id="detail-dimensions" class="detail-value">—</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Modified:</span>

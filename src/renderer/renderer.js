@@ -214,14 +214,33 @@ function updateDetailsPaneFromItem(item) {
   document.getElementById('detail-type').textContent =
     item.itemType === 'folder' ? 'Folder' : (item.extension || 'File').toUpperCase();
   document.getElementById('detail-size').textContent = formatSize(item.size);
+  const dimensionsElement = document.getElementById('detail-dimensions');
+  dimensionsElement.textContent = '—';
   document.getElementById('detail-modified').textContent = formatDate(item.createdTimeMs || item.modifiedTimeMs);
   document.getElementById('detail-path').textContent = item.path;
+
+  if (item.previewType === 'image' || item.previewType === 'tiff') {
+    window.printaViewApi.getImageDimensions(item.path).then((result) => {
+      if (selectedItemId !== item.id) {
+        return;
+      }
+
+      if (result.ok) {
+        dimensionsElement.textContent = `${result.width} × ${result.height} pixels`;
+      } else if (result.message !== 'Image dimensions are unavailable.') {
+        console.warn(result.message);
+      }
+    }).catch((error) => {
+      console.warn('Failed to read image dimensions:', error);
+    });
+  }
 }
 
 function clearDetailsPane() {
   document.getElementById('detail-name').textContent = '-';
   document.getElementById('detail-type').textContent = '-';
   document.getElementById('detail-size').textContent = '-';
+  document.getElementById('detail-dimensions').textContent = '-';
   document.getElementById('detail-modified').textContent = '-';
   document.getElementById('detail-path').textContent = '-';
 }

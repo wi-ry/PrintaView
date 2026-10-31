@@ -23,7 +23,7 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 - Right-click actions: `Open`, `Show in Windows Explorer`, `Favorite`/`Unfavorite`, and `Hide`/`Unhide`.
 - Favorites workflow with toolbar filter toggle (`All` / `Favorites`).
 - Hidden items are app-managed (do not change the Windows hidden attribute), with `Show Hidden Files`, per-item unhide, and `Clear All Hidden Items` in Settings.
-- Sort options: `Most Recently Downloaded`, `Name`, and `Type` (with expandable type groups).
+- Sort options: `Newest`, `Oldest`, `Name`, and `Type` (with expandable type groups).
 - Adjustable preview size slider.
 - Optional details pane with file metadata and configurable left/right pane position.
 - Theme selection (`Default`, `Pastel Pink`, `Baby Blue`) in Settings.
