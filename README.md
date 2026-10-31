@@ -58,7 +58,7 @@ Build output is written to the `release` folder as a portable executable that ca
 
 ## Microsoft Store Release
 
-Tagged releases build an unsigned MSIX, attach it alongside the portable EXE on GitHub Releases, and submit it to Microsoft Store. The Store signs the package; no signing certificate is needed.
+After the `Test on Main` workflow succeeds, semantic-release analyzes commits on `main`. When they require a release, it automatically updates the package version, creates a `vX.Y.Z` tag and GitHub release, then builds an unsigned MSIX and portable EXE. The portable EXE is attached to the GitHub release, while the MSIX is submitted directly to Microsoft Store and is not published as a release download. The Store signs the package; no signing certificate is needed.
 
 Before the first release:
 
@@ -75,7 +75,7 @@ Before the first release:
    - `SECRET_VALUE` (the service principal client secret)
 4. Ensure the service principal has permission to manage the PrintaView product in Partner Center.
 
-The workflow submits each tagged release and commits the Store submission automatically. The package version is derived from `package.json` and converted to the four-part MSIX version required by Windows.
+The workflow commits the calculated version to `package.json` and `package-lock.json`. The MSIX version is derived from that release version and converted to the four-part format required by Windows.
 
 To build the unsigned package locally after installing dependencies:
 
@@ -87,39 +87,13 @@ npx electron-builder --win dir
 
 Set the three `MSIX_*` environment variables to the Partner Center identity values when producing a package intended for Store submission.
 
-## Version Bumping and GitHub Releases (CI/CD)
+## Automatic Versioning and Releases (CI/CD)
 
-This repo includes a GitHub Actions workflow at [.github/workflows/release.yml](.github/workflows/release.yml) that:
+Releases are driven by [Conventional Commits](https://www.conventionalcommits.org/) merged to `main`:
 
-- Triggers on tags like `v1.2.3`
-- Validates the tag version matches `package.json` version
-- Builds the Windows portable EXE and unsigned MSIX
-- Creates a GitHub release and uploads both packages
-- Submits the MSIX to Microsoft Store
+- `fix: ...` creates a patch release (for example, `1.0.5` → `1.0.6`).
+- `feat: ...` creates a minor release (for example, `1.0.5` → `1.1.0`).
+- Add `!` after the type or include `BREAKING CHANGE:` in the commit body to create a major release.
+- Other commit types that do not indicate a feature, fix, or breaking change do not trigger a release.
 
-Use this flow when releasing (after completing the Microsoft Store setup above):
-
-1. Bump version (updates `package.json` and `package-lock.json`):
-
-```powershell
-npm version patch --no-git-tag-version
-```
-
-Use `minor` or `major` instead of `patch` when needed.
-
-2. Commit and push:
-
-```powershell
-git add package.json package-lock.json
-git commit -m "chore: bump version to x.y.z"
-git push
-```
-
-3. Create and push matching release tag (must match `package.json`):
-
-```powershell
-git tag vX.Y.Z
-git push origin vX.Y.Z
-```
-
-After the tag is pushed, GitHub Actions will build and publish the release artifact automatically.
+Pull request titles and commit messages are checked for Conventional Commit formatting. Use a release-triggering title such as `fix: correct PDF preview` or `feat: add folder filtering` when the change should ship. When CI succeeds on `main`, semantic-release updates `package.json` and `package-lock.json`, creates the version tag and GitHub release, and triggers the Windows packaging and Store submission job. The GitHub release includes the portable EXE; the unsigned MSIX is submitted directly to Microsoft Store only. No manual version bump or tag is needed. See [.github/workflows/conventional-commits.yml](.github/workflows/conventional-commits.yml), [.github/workflows/release.yml](.github/workflows/release.yml), and [.releaserc.json](.releaserc.json).

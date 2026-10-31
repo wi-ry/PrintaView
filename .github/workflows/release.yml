@@ -1,20 +1,60 @@
-name: Build and Release Windows EXE
+name: Semantic Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows:
+      - Test on Main
+    branches:
+      - main
+    types:
+      - completed
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  build-and-release:
-    runs-on: windows-latest
+  release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.semantic.outputs.new_release_published }}
+      tag: ${{ steps.semantic.outputs.new_release_git_tag }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Run semantic-release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v8
+        with:
+          extra_plugins: |
+            @semantic-release/npm@13.2.0
+            @semantic-release/git@11.0.1
+            conventional-changelog-conventionalcommits@9.3.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-upload:
+    needs: release
+    if: ${{ needs.release.outputs.published == 'true' }}
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -24,23 +64,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Validate tag matches package version
-        id: version
-        shell: bash
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(node -p "require('./package.json').version")
-
-          echo "Tag version: $TAG_VERSION"
-          echo "Package version: $PKG_VERSION"
-
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "Tag version does not match package.json version"
-            exit 1
-          fi
-
-          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Validate Microsoft Store configuration
         shell: pwsh
@@ -60,6 +83,16 @@ jobs:
             }
           }
 
+      - name: Validate release version
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($packageVersion -ne $env:RELEASE_VERSION) {
+            throw "Release tag version $env:RELEASE_VERSION does not match package.json version $packageVersion."
+          }
+
       - name: Build Windows portable EXE
         run: npm run build:win
 
@@ -72,37 +105,32 @@ jobs:
           MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
           MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
           MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
-        run: .github/scripts/package-msix.ps1 -Version "${{ steps.version.outputs.version }}"
+        run: .github/scripts/package-msix.ps1 -Version "${{ needs.release.outputs.version }}"
 
-      - name: Verify release file exists
+      - name: Verify release packages
         id: artifact
         shell: bash
         run: |
-          EXE_PATH="release/PrintaView-${{ steps.version.outputs.version }}-Portable.exe"
-          if [ ! -f "$EXE_PATH" ]; then
-            echo "Expected artifact not found: $EXE_PATH"
-            echo "release directory contents:"
-            ls -la release
-            exit 1
-          fi
+          EXE_PATH="release/PrintaView-${{ needs.release.outputs.version }}-Portable.exe"
+          MSIX_PATH="release/msix/PrintaView_${{ needs.release.outputs.version }}.0_x64.msix"
+
+          for artifact in "$EXE_PATH" "$MSIX_PATH"; do
+            if [ ! -f "$artifact" ]; then
+              echo "Expected release package not found: $artifact"
+              ls -la release
+              exit 1
+            fi
+          done
 
           echo "exe_path=$EXE_PATH" >> "$GITHUB_OUTPUT"
-          MSIX_PATH="release/msix/PrintaView_${{ steps.version.outputs.version }}.0_x64.msix"
-          if [ ! -f "$MSIX_PATH" ]; then
-            echo "Expected Store package not found: $MSIX_PATH"
-            exit 1
-          fi
           echo "msix_path=$MSIX_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub release and upload packages
-        uses: softprops/action-gh-release@v2
+      - name: Upload portable EXE to GitHub release
+        uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.ref_name }}
-          name: PrintaView v${{ steps.version.outputs.version }}
-          files: |
-            ${{ steps.artifact.outputs.exe_path }}
-            ${{ steps.artifact.outputs.msix_path }}
-          generate_release_notes: true
+          tag_name: ${{ needs.release.outputs.tag }}
+          name: PrintaView v${{ needs.release.outputs.version }}
+          files: ${{ steps.artifact.outputs.exe_path }}
 
       - name: Setup Microsoft Store CLI
         uses: microsoft/setup-msstore-cli@v1
@@ -135,7 +163,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "msstore $($args[0]) failed (exit code $LASTEXITCODE)." }
           }
 
-          # Upload as a draft first; explicitly commit only after the upload succeeds.
           Invoke-Store publish $env:MSIX_PATH -id $env:STORE_ID --noCommit -v --uploadTimeout 300
           Invoke-Store submission publish $env:STORE_ID
           Invoke-Store submission poll $env:STORE_ID
