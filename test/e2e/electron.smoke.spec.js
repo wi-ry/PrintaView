@@ -85,6 +85,16 @@ test('main window loads and settings window opens', async () => {
     const settingsWindow = await settingsWindowPromise;
 
     await expect(settingsWindow).toHaveTitle(/Settings - PrintaView/);
+    await expect(settingsWindow.getByRole('tab', { name: 'Display' })).toHaveAttribute('aria-selected', 'true');
+    await expect(settingsWindow.locator('#display-panel')).toBeVisible();
+    await expect(settingsWindow.locator('#hidden-files-panel')).toBeHidden();
+    await settingsWindow.getByRole('tab', { name: 'Hidden Files' }).click();
+    await expect(settingsWindow.locator('#hidden-files-panel')).toBeVisible();
+    await expect(settingsWindow.locator('#display-panel')).toBeHidden();
+    await expect(settingsWindow.locator('#show-hidden')).toBeVisible();
+    await settingsWindow.getByRole('tab', { name: 'Display' }).click();
+    await expect(settingsWindow.locator('#display-panel')).toBeVisible();
+    await expect(settingsWindow.locator('#hidden-files-panel')).toBeHidden();
     await settingsWindow.close();
   } finally {
     await cleanup();

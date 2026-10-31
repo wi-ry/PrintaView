@@ -495,7 +495,9 @@ function createSettingsWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
-    }
+    },
+    maximizable: false,
+    fullscreenable: false,
   };
   
   if (iconPath) {
