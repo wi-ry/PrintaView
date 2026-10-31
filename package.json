@@ -1,6 +1,6 @@
 {
   "name": "printaview",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Unified Downloads preview app for Windows",
   "main": "src/main.js",
   "author": "",
