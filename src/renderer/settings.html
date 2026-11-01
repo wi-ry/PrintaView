@@ -212,6 +212,45 @@
         border-color: var(--accent);
         background: rgba(6, 102, 122, 0.08);
       }
+      .about-content {
+        text-align: center;
+        padding: 12px 0;
+      }
+      .about-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .about-version {
+        margin-top: 4px;
+        font-size: 0.9rem;
+        color: var(--ink-soft);
+      }
+      .about-description {
+        margin: 16px 0;
+        font-size: 0.9rem;
+        color: var(--ink);
+      }
+      .about-details {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 14px;
+        margin: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        font-size: 0.85rem;
+        text-align: left;
+      }
+      .about-details dt {
+        font-weight: 600;
+        color: var(--ink-soft);
+      }
+      .about-details dd {
+        margin: 0;
+        color: var(--ink);
+      }
       .settings-buttons {
         flex-shrink: 0; /* footer is never squished */
         display: flex;
@@ -255,6 +294,8 @@
           aria-selected="true" aria-controls="display-panel" tabindex="0">Display</button>
         <button id="hidden-files-tab" class="settings-tab" type="button" role="tab"
           aria-selected="false" aria-controls="hidden-files-panel" tabindex="-1">Hidden Files</button>
+        <button id="about-tab" class="settings-tab" type="button" role="tab"
+          aria-selected="false" aria-controls="about-panel" tabindex="-1">About</button>
       </div>
 
       <section id="display-panel" class="settings-tab-panel" role="tabpanel"
@@ -310,6 +351,28 @@
           </div>
           <div id="hidden-items-list"></div>
           <button id="clear-all-hidden" type="button">Clear All Hidden Items</button>
+        </div>
+      </section>
+
+      <section id="about-panel" class="settings-tab-panel" role="tabpanel"
+        aria-labelledby="about-tab" tabindex="0" hidden>
+        <div class="settings-section">
+          <div class="settings-section-title">About</div>
+          <div class="about-content">
+            <div class="about-name">PrintaView</div>
+            <div class="about-version">Version <span id="app-version">1.0.0</span></div>
+            <p class="about-description">
+              A simple viewer for browsing and previewing your files.
+            </p>
+            <dl class="about-details">
+              <dt>Author</dt>
+              <dd>Will Ryan</dd>
+              <dt>License</dt>
+              <dd>MIT</dd>
+              <dt>GitHub</dt>
+              <dd><a href="https://github.com/wi-ry/" target="_blank" rel="noopener noreferrer">https://github.com/wi-ry/</a></dd>
+            </dl>
+          </div>
         </div>
       </section>
     </div>

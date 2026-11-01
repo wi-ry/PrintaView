@@ -506,6 +506,23 @@ function createSettingsWindow() {
   
   settingsWindow = new BrowserWindow(config);
 
+  // Open target="_blank" links in the user's default browser
+  settingsWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  settingsWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== settingsWindow.webContents.getURL()) {
+      event.preventDefault();
+      if (url.startsWith('https://') || url.startsWith('http://')) {
+        shell.openExternal(url);
+      }
+    }
+  });
+
   settingsWindow.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
 
   settingsWindow.on('closed', () => {
@@ -743,6 +760,8 @@ ipcMain.handle('tiff:getPreview', async (_event, payload = {}) => {
     return { ok: false, message: `Failed to generate TIFF preview: ${error.message}` };
   }
 });
+
+ipcMain.handle('get-app-version', () => app.getVersion());
 
 ipcMain.on('settings:open', () => {
   createSettingsWindow();

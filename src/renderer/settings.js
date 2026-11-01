@@ -81,18 +81,23 @@ function getSelectedTheme() {
 // Sync with main window
 async function syncSettings() {
   const settings = await window.printaViewApi.getSettings();
-  
+
   originalSettings = { ...settings };
   pendingSettings = { ...settings };
-  
+
   showDetailsPaneCheckbox.checked = settings.showDetailsPane;
   showHiddenToggle.checked = settings.showHidden;
   setThemeInputValue(settings.theme || 'default');
   currentPanePosition = settings.panePosition;
   applyTheme(getSelectedTheme());
-  
+
   updatePanePositionUI();
   await updateHiddenItemsList();
+
+  const versionEl = document.getElementById('app-version');
+  if (versionEl && window.printaViewApi.getVersion) {
+    versionEl.textContent = await window.printaViewApi.getVersion();
+  }
 }
 
 function updatePanePositionUI() {
