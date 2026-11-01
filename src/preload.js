@@ -16,5 +16,6 @@ contextBridge.exposeInMainWorld('printaViewApi', {
   saveSettings: (payload) => ipcRenderer.invoke('settings:save', payload),
   getHiddenItems: () => ipcRenderer.invoke('hidden:getItems'),
   clearAllHidden: () => ipcRenderer.invoke('hidden:clearAll'),
-  openSettings: () => ipcRenderer.send('settings:open')
+  getVersion: () => ipcRenderer.invoke('get-app-version'),
+  openSettings: () => ipcRenderer.send('settings:open'),
 });
