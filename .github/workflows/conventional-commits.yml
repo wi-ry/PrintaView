@@ -24,6 +24,7 @@ jobs:
 
   commit-messages:
     name: Commit message lint
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
