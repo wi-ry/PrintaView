@@ -20,14 +20,18 @@ test('createScannedItems maps path metadata, preview types, hidden ancestry, and
   const items = createScannedItems([
     { absolutePath: folderPath, parentPath: root, stats: stats({ directory: true }) },
     { absolutePath: imagePath, parentPath: folderPath, stats: stats({ size: 12 }) },
-    { absolutePath: pdfPath, parentPath: root, stats: stats({ size: 34 }) }
+    { absolutePath: pdfPath, parentPath: root, stats: stats({ size: 34 }) },
+    { absolutePath: path.join(root, 'artwork.psd'), parentPath: root, stats: stats({ size: 56 }) }
   ], new Set([normalizePathForKey(folderPath)]), new Set([normalizePathForKey(imagePath)]), true);
 
-  assert.deepEqual(items.map(({ name }) => name), ['hidden-folder', 'favorite.PNG', 'document.pdf']);
+  assert.deepEqual(items.map(({ name }) => name), [
+    'hidden-folder', 'favorite.PNG', 'document.pdf', 'artwork.psd'
+  ]);
   assert.deepEqual(items.map(({ itemType, previewType }) => [itemType, previewType]), [
     ['folder', 'folder'],
     ['file', 'image'],
-    ['file', 'pdf']
+    ['file', 'pdf'],
+    ['file', 'psd']
   ]);
   assert.equal(items[1].extension, '.png');
   assert.equal(items[1].size, 12);

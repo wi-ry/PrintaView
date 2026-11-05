@@ -16,8 +16,9 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 
 ## Features
 
-- Recursive file browser for your configured root folder (defaults to `Downloads`, with `Browse` to switch).
-- Shows supported files only: images (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`) and `pdf`.
+- Recursive file browser for your configured root folder (defaults to `Downloads`, with `Change folder` beside the current path).
+- Shows supported files only: images (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`, `psd`) and `pdf`.
+- PSD previews use the embedded JPEG thumbnail when one is available.
 - Image thumbnails and generated PDF first-page thumbnails (with page count).
 - Generic type tiles for supported non-image/non-PDF files (for example `docx` and `pptx`).
 - Right-click actions: `Open`, `Show in Windows Explorer`, `Favorite`/`Unfavorite`, and `Hide`/`Unhide`.
@@ -26,6 +27,8 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 - Sort options: `Newest`, `Oldest`, `Name`, and `Type` (with expandable type groups).
 - Adjustable preview size slider.
 - Optional details pane with file metadata and configurable left/right pane position.
+- Duplicate review shows matching files side by side; selecting one shows its preview and details. Per-file icons open it, show its folder, or move it to the Recycle Bin.
+- File action icons appear on hover in regular browsing and Duplicate Review.
 - Theme selection (`Default`, `Pastel Pink`, `Baby Blue`) in Settings.
 
 ## Development
@@ -42,11 +45,13 @@ npm install
 npm start
 ```
 
-3. Run tests:
+3. Run tests (Electron UI tests are headless by default):
 
 ```powershell
-npm test
+npm run test:all
 ```
+
+To show the app windows while debugging UI tests, set `PRINTAVIEW_TEST_HEADED=1` before running `npm run test:e2e` or `npm run test:packaged`.
 
 ## Build Standalone Portable EXE (Windows)
 

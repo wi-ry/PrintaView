@@ -1,6 +1,9 @@
 const showDetailsPaneCheckbox = document.getElementById('show-details-pane');
 const showHiddenToggle = document.getElementById('show-hidden');
 const themeInputs = document.querySelectorAll('input[name="theme"]');
+const defaultFileTypeInputs = document.querySelectorAll('#default-file-types input');
+const customFileTypesToggle = document.querySelector('#default-file-types input[value="custom"]');
+const customExtensionsInput = document.getElementById('custom-extensions');
 const paneLeftBtn = document.getElementById('pane-left-btn');
 const paneRightBtn = document.getElementById('pane-right-btn');
 const hiddenItemsList = document.getElementById('hidden-items-list');
@@ -18,7 +21,9 @@ let pendingSettings = {
   showDetailsPane: true,
   showHidden: false,
   panePosition: 'right',
-  theme: 'default'
+  theme: 'default',
+  defaultFileTypes: ['image', 'pdf', 'tiff'],
+  customExtensions: []
 };
 
 function activateSettingsTab(tab, moveFocus = false) {
@@ -78,6 +83,10 @@ function getSelectedTheme() {
   return selected ? selected.value : 'default';
 }
 
+function updateCustomExtensionsInput() {
+  customExtensionsInput.disabled = !customFileTypesToggle.checked;
+}
+
 // Sync with main window
 async function syncSettings() {
   const settings = await window.printaViewApi.getSettings();
@@ -87,6 +96,16 @@ async function syncSettings() {
 
   showDetailsPaneCheckbox.checked = settings.showDetailsPane;
   showHiddenToggle.checked = settings.showHidden;
+  const defaultFileTypes = Array.isArray(settings.defaultFileTypes)
+    ? settings.defaultFileTypes
+    : ['image', 'pdf', 'tiff'];
+  defaultFileTypeInputs.forEach((input) => {
+    input.checked = defaultFileTypes.includes(input.value);
+  });
+  updateCustomExtensionsInput();
+  customExtensionsInput.value = window.PrintaViewItemUtils
+    .normalizeExtensions(settings.customExtensions)
+    .join(', ');
   setThemeInputValue(settings.theme || 'default');
   currentPanePosition = settings.panePosition;
   applyTheme(getSelectedTheme());
@@ -149,6 +168,20 @@ themeInputs.forEach((input) => {
     pendingSettings.theme = theme;
     applyTheme(theme);
   });
+});
+
+defaultFileTypeInputs.forEach((input) => {
+  input.addEventListener('change', () => {
+    pendingSettings.defaultFileTypes = Array.from(defaultFileTypeInputs)
+      .filter((checkbox) => checkbox.checked)
+      .map((checkbox) => checkbox.value);
+    updateCustomExtensionsInput();
+  });
+});
+
+customExtensionsInput.addEventListener('input', () => {
+  pendingSettings.customExtensions = window.PrintaViewItemUtils
+    .normalizeExtensions(customExtensionsInput.value);
 });
 
 paneLeftBtn.addEventListener('click', () => {

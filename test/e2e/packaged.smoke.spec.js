@@ -27,7 +27,7 @@ test('packaged app launches and scans the configured folder', async () => {
   try {
     electronApp = await electron.launch({
       executablePath,
-      args: [],
+      args: process.env.PRINTAVIEW_TEST_HEADED === '1' ? [] : ['--headless'],
       env: {
         ...process.env,
         PRINTAVIEW_DATA_DIR: dataRoot

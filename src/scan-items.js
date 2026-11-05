@@ -30,6 +30,10 @@ function categorizeFile(filePath, isDirectory) {
     return { itemType: 'file', previewType: 'image' };
   }
 
+  if (ext === '.psd') {
+    return { itemType: 'file', previewType: 'psd' };
+  }
+
   if (ext === '.pdf') {
     return { itemType: 'file', previewType: 'pdf' };
   }

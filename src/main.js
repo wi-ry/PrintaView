@@ -6,6 +6,9 @@ const sharp = require('sharp');
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
 const { walkDirectoryRecursive: walkDirectoryEntries } = require('./directory-walker');
 const { createScannedItems, normalizePathForKey } = require('./scan-items');
+const { findDuplicateGroups } = require('./duplicate-scanner');
+const { readPsdPreviewData } = require('./psd-preview');
+const itemUtils = require('./renderer/item-utils');
 
 let mainWindow;
 let settingsWindow;
@@ -229,8 +232,12 @@ function loadSettings() {
       showDetailsPane: true,
       showHidden: false,
       panePosition: 'right',
+      detailsPaneWidth: 320,
       sortBy: 'recent',
       favoritesFilter: 'all',
+      filters: null,
+      defaultFileTypes: ['image', 'pdf', 'tiff'],
+      customExtensions: [],
       theme: 'default'
     };
   }
@@ -244,8 +251,14 @@ function loadSettings() {
       showDetailsPane: parsed.showDetailsPane !== false,
       showHidden: parsed.showHidden === true,
       panePosition: parsed.panePosition || 'right',
+      detailsPaneWidth: normalizeDetailsPaneWidth(parsed.detailsPaneWidth),
       sortBy: allowedSort.has(parsed.sortBy) ? parsed.sortBy : 'recent',
       favoritesFilter: allowedFavoritesFilter.has(parsed.favoritesFilter) ? parsed.favoritesFilter : 'all',
+      filters: parsed.filters && typeof parsed.filters === 'object' ? parsed.filters : null,
+      defaultFileTypes: Array.isArray(parsed.defaultFileTypes)
+        ? itemUtils.normalizeFilters({ types: parsed.defaultFileTypes }).types
+        : ['image', 'pdf', 'tiff'],
+      customExtensions: itemUtils.normalizeExtensions(parsed.customExtensions),
       theme: allowedThemes.has(parsed.theme) ? parsed.theme : 'default'
     };
   } catch (error) {
@@ -253,11 +266,21 @@ function loadSettings() {
       showDetailsPane: true,
       showHidden: false,
       panePosition: 'right',
+      detailsPaneWidth: 320,
       sortBy: 'recent',
       favoritesFilter: 'all',
+      filters: null,
+      defaultFileTypes: ['image', 'pdf', 'tiff'],
+      customExtensions: [],
       theme: 'default'
     };
   }
+}
+
+function normalizeDetailsPaneWidth(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 320;
+  const width = value;
+  return Math.min(600, Math.max(240, Math.round(width)));
 }
 
 function saveSettings(settings) {
@@ -270,6 +293,7 @@ function saveSettings(settings) {
       existing = {};
     }
   }
+  delete existing.showFileActionIcons;
   const updated = { ...existing, ...settings };
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(updated, null, 2), 'utf8');
@@ -390,9 +414,9 @@ function createSettingsWindow() {
 
   const iconPath = getAppIconPath();
   const config = {
-    width: 400,
+    width: 540,
     height: 600,
-    minWidth: 350,
+    minWidth: 500,
     minHeight: 400,
     title: 'Settings - PrintaView',
     backgroundColor: '#f5f2ea',
@@ -472,6 +496,26 @@ ipcMain.handle('items:scan', async (_event, payload = {}) => {
   return walkDirectoryRecursive(downloadsPath, hiddenSet, favoriteSet, includeHidden);
 });
 
+ipcMain.handle('items:findDuplicates', async (_event, payload = {}) => {
+  const entries = await walkDirectoryEntries(getRootFolder());
+  const hiddenSet = loadHiddenPaths();
+  const favoriteSet = loadFavoritePaths();
+  const settings = loadSettings();
+  const includeHidden = settings.showHidden === true;
+  const selectedTypes = itemUtils.normalizeFilters({ types: payload.types }, settings.defaultFileTypes).types;
+  const customExtensions = itemUtils.normalizeExtensions(settings.customExtensions);
+  const files = createScannedItems(entries, hiddenSet, favoriteSet, includeHidden)
+    .filter((item) => item.itemType === 'file')
+    .filter((item) => selectedTypes.includes(itemUtils.getItemType(item, customExtensions)))
+    .map(({ path: filePath, name, size, modifiedTimeMs }) => ({
+      path: filePath,
+      name,
+      size,
+      modifiedTimeMs
+    }));
+  return findDuplicateGroups(files);
+});
+
 ipcMain.handle('items:setHidden', (_event, payload = {}) => {
   const inputPath = payload.path;
   const hidden = Boolean(payload.hidden);
@@ -518,6 +562,32 @@ ipcMain.handle('items:reveal', (_event, payload = {}) => {
     return { ok: true };
   } catch (error) {
     return { ok: false, message: error.message };
+  }
+});
+
+ipcMain.handle('items:delete', async (_event, payload = {}) => {
+  const inputPath = payload.path;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  try {
+    const stats = await fs.promises.stat(inputPath);
+    if (!stats.isFile()) {
+      return { ok: false, message: 'Only files can be moved to the Recycle Bin.' };
+    }
+
+    await shell.trashItem(inputPath);
+    const normalizedPath = normalizePathForKey(inputPath);
+    const hiddenSet = loadHiddenPaths();
+    const favoriteSet = loadFavoritePaths();
+    hiddenSet.delete(normalizedPath);
+    favoriteSet.delete(normalizedPath);
+    saveHiddenPaths(hiddenSet);
+    saveFavoritePaths(favoriteSet);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: `Could not move file to the Recycle Bin: ${error.message}` };
   }
 });
 
@@ -635,6 +705,14 @@ ipcMain.handle('image:getDimensions', async (_event, payload = {}) => {
   }
 
   try {
+    if (path.extname(inputPath).toLowerCase() === '.psd') {
+      const psd = await readPsdPreviewData(inputPath);
+      if (!psd) {
+        return { ok: false, message: 'PSD dimensions are unavailable.' };
+      }
+      return { ok: true, width: psd.width, height: psd.height };
+    }
+
     const metadata = await sharp(inputPath).metadata();
     if (!metadata.width || !metadata.height) {
       return { ok: false, message: 'Image dimensions are unavailable.' };
@@ -643,6 +721,34 @@ ipcMain.handle('image:getDimensions', async (_event, payload = {}) => {
     return { ok: true, width: metadata.width, height: metadata.height };
   } catch (error) {
     return { ok: false, message: `Failed to read image dimensions: ${error.message}` };
+  }
+});
+
+ipcMain.handle('psd:getPreview', async (_event, payload = {}) => {
+  const inputPath = payload.path;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { ok: false, message: 'Invalid path.' };
+  }
+
+  try {
+    const psd = await readPsdPreviewData(inputPath);
+    if (!psd?.thumbnailBuffer) {
+      return { ok: false, message: 'No embedded PSD preview is available.' };
+    }
+
+    const buffer = await sharp(psd.thumbnailBuffer)
+      .resize(600, 600, { fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer();
+
+    return {
+      ok: true,
+      width: psd.width,
+      height: psd.height,
+      dataUrl: `data:image/png;base64,${buffer.toString('base64')}`
+    };
+  } catch (error) {
+    return { ok: false, message: `Failed to generate PSD preview: ${error.message}` };
   }
 });
 

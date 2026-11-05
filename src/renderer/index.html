@@ -9,15 +9,26 @@
   <body>
     <div class="app-shell">
       <header class="toolbar">
-        <div class="brand">PrintaView</div>
+        <div class="brand">
+          <img src="../../assets/icon.png" alt="" aria-hidden="true" />
+          <span>PrintaView</span>
+        </div>
         <div class="toolbar-group">
-          <label for="sort-select">Sort</label>
-          <select id="sort-select">
-            <option value="recent">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="name">Name</option>
-            <option value="type">Type</option>
-          </select>
+          <label id="sort-label">Sort</label>
+          <div class="sort-control toolbar-dropdown-control">
+            <button id="sort-select" class="toolbar-dropdown-button" type="button"
+              aria-label="Sort" aria-haspopup="menu" aria-expanded="false" aria-controls="sort-popover"
+              data-sort-value="recent">
+              <span id="sort-value-label">Newest</span>
+            </button>
+            <div id="sort-popover" class="sort-popover toolbar-popover" role="menu"
+              aria-labelledby="sort-label" hidden>
+              <button type="button" role="menuitemradio" aria-checked="true" data-sort-value="recent">Newest</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-sort-value="oldest">Oldest</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-sort-value="name">Name</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-sort-value="type">Type</button>
+            </div>
+          </div>
         </div>
         <div class="toolbar-group size-group">
           <label for="size-range">Preview Size</label>
@@ -30,21 +41,82 @@
             <button id="search-clear" type="button" class="search-clear" title="Clear search" hidden>✕</button>
           </div>
         </div>
-        <div class="toolbar-group favorites-group" aria-label="Favorites filter">
-          <span>View</span>
-          <button id="favorites-all-button" class="toggle-pill" type="button" aria-pressed="true">All</button>
-          <button id="favorites-only-button" class="toggle-pill" type="button" aria-pressed="false">Favorites</button>
+        <div class="filter-control toolbar-dropdown-control">
+          <button id="filter-button" class="toolbar-dropdown-button" type="button" aria-expanded="false" aria-controls="filter-popover">
+            Filters <span id="filter-count" class="filter-count" hidden></span>
+          </button>
+          <div id="filter-popover" class="filter-popover toolbar-popover" hidden>
+            <label class="filter-select-label" for="favorites-filter">Favorites</label>
+            <select id="favorites-filter">
+              <option value="all">All</option>
+              <option value="favorites">Favorites</option>
+            </select>
+            <fieldset>
+              <legend>File type</legend>
+              <label><input type="checkbox" name="file-type" value="image" checked /> Images</label>
+              <label><input type="checkbox" name="file-type" value="pdf" checked /> PDF</label>
+              <label><input type="checkbox" name="file-type" value="tiff" checked /> TIFF</label>
+              <label><input type="checkbox" name="file-type" value="other" /> Other</label>
+              <label><input type="checkbox" name="file-type" value="custom" disabled /> Custom</label>
+            </fieldset>
+            <label class="filter-select-label" for="modified-filter">Modified</label>
+            <select id="modified-filter">
+              <option value="any">Any time</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="1y">Last year</option>
+            </select>
+            <label class="filter-select-label" for="size-filter">File size</label>
+            <select id="size-filter">
+              <option value="any">Any size</option>
+              <option value="under-1mb">Under 1 MB</option>
+              <option value="1-10mb">1–10 MB</option>
+              <option value="over-10mb">Over 10 MB</option>
+            </select>
+            <div class="filter-actions">
+              <button id="clear-filters-button" type="button">Clear filters</button>
+              <button id="find-duplicates-button" type="button">Find duplicates</button>
+            </div>
+          </div>
         </div>
         <button id="refresh-button" class="icon-button" type="button" title="Refresh" aria-label="Refresh">
-          <img src="../../assets/refresh_icon.png" alt="" aria-hidden="true" />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12a9 9 0 0 0-15-6.7L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M3 12a9 9 0 0 0 15 6.7L21 16" />
+            <path d="M21 21v-5h-5" />
+          </svg>
         </button>
         <button id="view-menu-button" class="icon-button" type="button" title="View Settings" aria-label="View Settings">
-          <img src="../../assets/settings_icon.png" alt="" aria-hidden="true" />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33h-.09a1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4 15.08V15a1.65 1.65 0 0 0-1.51-1H2.4a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4 8.49v-.08a1.65 1.65 0 0 0-.33-1.82L3.61 6.5a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V2.4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H20.4a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+          </svg>
         </button>
       </header>
       <div class="path-row">
         <span id="downloads-path" class="path-value"></span>
-        <button id="browse-button" type="button" class="browse-btn">Browse</button>
+        <button id="browse-button" type="button" class="browse-btn path-action-button">Change folder</button>
+        <button id="toggle-details-pane-button" class="icon-button details-pane-toggle" type="button"
+          aria-label="Hide details pane" title="Hide details pane" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path class="pane-state-open" d="M15 3v18" />
+            <rect class="pane-state-open" x="16" y="4" width="4" height="16" rx="1" />
+            <path class="pane-state-closed" d="M19 3v18" />
+          </svg>
+        </button>
+      </div>
+      <div id="active-filter-bar" class="active-filter-bar" hidden aria-label="Active filters"></div>
+      <div id="duplicate-toolbar" class="duplicate-toolbar" hidden>
+        <strong>Exact duplicates</strong>
+        <span id="duplicate-warning" class="duplicate-warning" role="status" hidden></span>
+        <button id="duplicate-back-button" class="path-action-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Back to files
+        </button>
       </div>
       <div class="content-wrapper">
         <main id="main-content">
@@ -54,10 +126,27 @@
           </div>
           <section id="grid" class="grid"></section>
         </main>
+        <div id="details-pane-resizer" class="details-pane-resizer" role="separator" aria-orientation="vertical"
+          aria-label="Resize details pane" aria-valuemin="240" aria-valuemax="600" aria-valuenow="320" tabindex="0"></div>
         <aside id="details-pane" class="details-pane">
           <div class="details-header">
             <h2>File Details</h2>
+            <button id="close-details-pane-button" class="icon-button details-pane-close" type="button"
+              aria-label="Close details pane" title="Close details pane">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
+            </button>
           </div>
+          <div id="detail-preview" class="detail-preview" hidden>
+            <span class="detail-preview-empty">Select a file to preview it.</span>
+          </div>
+          <template id="duplicate-group-template">
+            <section class="duplicate-group">
+              <h3 class="duplicate-heading"></h3>
+              <div class="duplicate-files"></div>
+            </section>
+          </template>
           <div class="details-content">
             <div class="detail-item">
               <span class="detail-label">Name:</span>
@@ -106,6 +195,20 @@
           <h3 class="title"></h3>
         </div>
       </article>
+    </template>
+
+    <template id="card-actions-template">
+      <div class="card-actions" role="group" aria-label="File actions">
+        <button class="card-action open-file-action" type="button" aria-label="Open file" title="Open file">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7M10 14 21 3"/><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg>
+        </button>
+        <button class="card-action show-folder-action" type="button" aria-label="Show in folder" title="Show in folder">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v1"/><path d="M3 11h18l-2 9H5l-2-9Z"/></svg>
+        </button>
+        <button class="card-action delete-file-action" type="button" aria-label="Move to Recycle Bin" title="Move to Recycle Bin">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+        </button>
+      </div>
     </template>
 
     <script src="./item-utils.js"></script>
