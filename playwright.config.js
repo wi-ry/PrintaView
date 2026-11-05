@@ -2,6 +2,7 @@ const { defineConfig } = require('playwright/test');
 
 module.exports = defineConfig({
   testDir: './test/e2e',
+  testIgnore: ['**/packaged.smoke.spec.js'],
   timeout: 30000,
   expect: {
     timeout: 5000

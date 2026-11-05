@@ -259,10 +259,49 @@ main {
 }
 
 #main-content {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 18px;
+}
+
+.loading-state {
+  position: absolute;
+  inset: 18px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  pointer-events: none;
+}
+
+.loading-state[hidden] {
+  display: none;
+}
+
+.loading-state.is-loading .loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: loading-spin 800ms linear infinite;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-state.is-loading .loading-spinner {
+    animation: none;
+  }
 }
 
 .details-pane {

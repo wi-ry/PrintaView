@@ -50,9 +50,31 @@
     });
   }
 
+  function toFileUrl(filePath) {
+    const normalized = filePath.replace(/\\/g, '/');
+
+    if (normalized.startsWith('//')) {
+      const [, , host, ...segments] = normalized.split('/');
+      return `file://${host}/${segments.map(encodeURIComponent).join('/')}`;
+    }
+
+    const segments = normalized.split('/');
+    const drivePrefix = /^[a-zA-Z]:$/.test(segments[0]) ? segments.shift() : null;
+    const encodedPath = segments.map(encodeURIComponent).join('/');
+    return drivePrefix
+      ? `file:///${drivePrefix}/${encodedPath}`
+      : `file://${encodedPath}`;
+  }
+
+  function findCardByItemId(cards, itemId) {
+    return Array.from(cards).find((card) => card.dataset.itemId === itemId) || null;
+  }
+
   return {
     SUPPORTED_EXTENSIONS,
     sortItems,
-    filterSupportedItems
+    filterSupportedItems,
+    toFileUrl,
+    findCardByItemId
   };
 });

@@ -4,6 +4,8 @@ const os = require('os');
 const crypto = require('crypto');
 const sharp = require('sharp');
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
+const { walkDirectoryRecursive: walkDirectoryEntries } = require('./directory-walker');
+const { createScannedItems, normalizePathForKey } = require('./scan-items');
 
 let mainWindow;
 let settingsWindow;
@@ -281,10 +283,6 @@ function getRootFolder() {
   return path.join(os.homedir(), 'Downloads');
 }
 
-function normalizePathForKey(inputPath) {
-  return path.resolve(inputPath).toLowerCase();
-}
-
 function loadHiddenPaths() {
   const storePath = getHiddenStorePath();
   if (!fs.existsSync(storePath)) {
@@ -345,99 +343,9 @@ function saveFavoritePaths(favoriteSet) {
   fs.writeFileSync(storePath, JSON.stringify(entries, null, 2), 'utf8');
 }
 
-function isPathFavorited(targetPath, favoriteSet) {
-  return favoriteSet.has(normalizePathForKey(targetPath));
-}
-
-function isPathHidden(targetPath, hiddenSet) {
-  const normalized = normalizePathForKey(targetPath);
-  const segments = normalized.split(path.sep);
-
-  for (let i = segments.length; i > 0; i -= 1) {
-    const candidate = segments.slice(0, i).join(path.sep);
-    if (hiddenSet.has(candidate)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function categorizeFile(filePath, isDirectory) {
-  if (isDirectory) {
-    return { itemType: 'folder', previewType: 'folder' };
-  }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const imageExts = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp', '.ico']);
-
-  if (imageExts.has(ext)) {
-    return { itemType: 'file', previewType: 'image' };
-  }
-
-  if (ext === '.pdf') {
-    return { itemType: 'file', previewType: 'pdf' };
-  }
-
-  if (ext === '.tif' || ext === '.tiff') {
-    return { itemType: 'file', previewType: 'tiff' };
-  }
-
-  return { itemType: 'file', previewType: 'generic' };
-}
-
 async function walkDirectoryRecursive(rootDir, hiddenSet, favoriteSet, includeHidden) {
-  const allItems = [];
-  const stack = [rootDir];
-
-  while (stack.length > 0) {
-    const currentDir = stack.pop();
-    let entries = [];
-
-    try {
-      entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
-    } catch (error) {
-      continue;
-    }
-
-    for (const entry of entries) {
-      const absolutePath = path.join(currentDir, entry.name);
-      const shouldHide = isPathHidden(absolutePath, hiddenSet);
-
-      let stats;
-      try {
-        stats = await fs.promises.stat(absolutePath);
-      } catch (error) {
-        continue;
-      }
-
-      const { itemType, previewType } = categorizeFile(absolutePath, stats.isDirectory());
-      const item = {
-        id: normalizePathForKey(absolutePath),
-        name: entry.name,
-        path: absolutePath,
-        parentPath: currentDir,
-        extension: stats.isDirectory() ? '' : path.extname(entry.name).toLowerCase(),
-        itemType,
-        previewType,
-        modifiedTimeMs: stats.mtimeMs,
-        createdTimeMs: stats.birthtimeMs,
-        size: stats.size,
-        hiddenByApp: shouldHide,
-        favoritedByApp: isPathFavorited(absolutePath, favoriteSet)
-      };
-
-      if (includeHidden || !shouldHide) {
-        allItems.push(item);
-      }
-
-      if (stats.isDirectory()) {
-        stack.push(absolutePath);
-      }
-    }
-  }
-
-  return allItems;
+  const entries = await walkDirectoryEntries(rootDir);
+  return createScannedItems(entries, hiddenSet, favoriteSet, includeHidden);
 }
 
 function getAppIconPath() {

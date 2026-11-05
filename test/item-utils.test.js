@@ -1,7 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
+const { fileURLToPath } = require('node:url');
 
-const { sortItems, filterSupportedItems } = require('../src/renderer/item-utils.js');
+const {
+  sortItems,
+  filterSupportedItems,
+  toFileUrl,
+  findCardByItemId
+} = require('../src/renderer/item-utils.js');
 
 test('filterSupportedItems keeps only supported non-folder files', () => {
   const scanned = [
@@ -67,4 +74,39 @@ test('sortItems sorts by type, then by name within type', () => {
     sorted.map((item) => item.name),
     ['aFile', 'bFile', 'zFile', 'folderOne']
   );
+});
+
+test('toFileUrl encodes reserved characters in Windows paths', () => {
+  assert.equal(
+    toFileUrl('C:\\Users\\Person\\A #100%?.png'),
+    'file:///C:/Users/Person/A%20%23100%25%3F.png'
+  );
+});
+
+test('toFileUrl encodes reserved characters in UNC paths', () => {
+  assert.equal(
+    toFileUrl('\\\\server\\share\\A #100%?.png'),
+    'file://server/share/A%20%23100%25%3F.png'
+  );
+});
+
+test('toFileUrl round-trips an existing path containing reserved characters', () => {
+  const originalPath = path.join(
+    path.parse(process.cwd()).root,
+    'PrintaView URL test #100% [sample]?.png'
+  );
+  const fileUrl = toFileUrl(originalPath);
+
+  assert.equal(fileURLToPath(fileUrl), originalPath);
+});
+
+test('findCardByItemId matches Windows paths without parsing them as CSS', () => {
+  const path = 'c:\\users\\person\\file [#1].png';
+  const cards = [
+    { dataset: { itemId: 'c:\\users\\person\\other.png' } },
+    { dataset: { itemId: path } }
+  ];
+
+  assert.equal(findCardByItemId(cards, path), cards[1]);
+  assert.equal(findCardByItemId(cards, 'missing'), null);
 });

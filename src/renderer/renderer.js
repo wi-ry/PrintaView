@@ -6,6 +6,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const gridElement = document.getElementById('grid');
+const loadingStateElement = document.getElementById('loading-state');
+const loadingMessageElement = document.getElementById('loading-message');
 const downloadsPathElement = document.getElementById('downloads-path');
 const sortSelect = document.getElementById('sort-select');
 const sizeRange = document.getElementById('size-range');
@@ -35,6 +37,13 @@ let showHiddenFiles = false;
 let showOnlyFavorites = false;
 let searchQuery = '';
 const collapsedTypeGroups = new Set();
+
+function updateGridStatus(message, loading = false) {
+  loadingMessageElement.textContent = message;
+  loadingStateElement.classList.toggle('is-loading', loading);
+  loadingStateElement.setAttribute('aria-busy', loading ? 'true' : 'false');
+  loadingStateElement.hidden = message === '';
+}
 
 const imageCache = new Map();
 const pdfThumbnailCache = new Map();
@@ -151,8 +160,7 @@ function formatSize(bytes) {
 }
 
 function toFileUrl(filePath) {
-  const normalized = filePath.replace(/\\/g, '/');
-  return `file:///${encodeURI(normalized)}`;
+  return itemUtils.toFileUrl(filePath);
 }
 
 function applyTheme(theme) {
@@ -251,7 +259,10 @@ function selectCard(item) {
     previousSelected.classList.remove('selected');
   }
 
-  const newSelected = gridElement.querySelector(`[data-item-id="${item.id}"]`);
+  const newSelected = itemUtils.findCardByItemId(
+    gridElement.querySelectorAll('.card'),
+    item.id
+  );
   if (newSelected) {
     newSelected.classList.add('selected');
   }
@@ -477,6 +488,18 @@ function renderItems() {
   const sortBy = sortSelect.value;
   const sorted = itemUtils.sortItems(getVisibleItems(), sortBy);
 
+  if (sorted.length === 0) {
+    updateGridStatus(
+      allItems.length === 0
+        ? 'No supported files found in this folder.'
+        : 'No files match the current view.'
+    );
+    gridElement.classList.remove('grouped-by-type');
+    return;
+  }
+
+  updateGridStatus('');
+
   if (sortBy !== 'type') {
     gridElement.classList.remove('grouped-by-type');
     for (const item of sorted) {
@@ -564,14 +587,22 @@ async function applySettingsFromStore() {
 }
 
 async function refreshFromSettings() {
-  await applySettingsFromStore();
-  await loadItems();
+  updateGridStatus('Loading your files…', true);
+  try {
+    await applySettingsFromStore();
+    await loadItems();
 
-  const visibleItems = getVisibleItems();
-  if (visibleItems.length > 0) {
-    const keepSelected = visibleItems.find((item) => item.id === selectedItemId) || visibleItems[0];
-    selectCard(keepSelected);
-  } else {
+    const visibleItems = getVisibleItems();
+    if (visibleItems.length > 0) {
+      const keepSelected = visibleItems.find((item) => item.id === selectedItemId) || visibleItems[0];
+      selectCard(keepSelected);
+    } else {
+      selectedItemId = null;
+      clearDetailsPane();
+    }
+  } catch (error) {
+    console.error('Failed to load files:', error);
+    updateGridStatus('Could not load files. Check the folder and try Refresh.');
     selectedItemId = null;
     clearDetailsPane();
   }

@@ -77,6 +77,7 @@ test('main window loads and settings window opens', async () => {
     await expect(mainWindow.locator('.brand')).toHaveText('PrintaView');
     await expect(mainWindow.locator('#downloads-path')).toHaveText(fixtureRoot);
     await expect(mainWindow.locator('#grid .card').first()).toBeVisible();
+    await expect(mainWindow.locator('#loading-state')).toBeHidden();
     await expect(mainWindow.locator('#refresh-button img')).toHaveJSProperty('naturalWidth', 64);
     await expect(mainWindow.locator('#view-menu-button img')).toHaveJSProperty('naturalWidth', 64);
 
@@ -124,6 +125,38 @@ test('file details show raster image dimensions', async () => {
 
     await imageCard.click();
     await expect(mainWindow.locator('#detail-dimensions')).toHaveText('48 × 32 pixels');
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('selecting a file with CSS-special characters updates its card and details', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  const imageName = 'sample [#1] 100%.png';
+  await sharp({
+    create: {
+      width: 24,
+      height: 16,
+      channels: 4,
+      background: '#00ff00'
+    }
+  }).png().toFile(path.join(fixtureRoot, imageName));
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const imageCard = mainWindow.locator('#grid .card').filter({
+      has: mainWindow.locator('.title', { hasText: new RegExp(`^${imageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) })
+    });
+
+    await imageCard.click();
+
+    await expect(imageCard).toHaveClass(/selected/);
+    await expect(mainWindow.locator('#detail-name')).toHaveText(imageName);
+    await expect(mainWindow.locator('#detail-path')).toHaveText(path.join(fixtureRoot, imageName));
   } finally {
     await cleanup();
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

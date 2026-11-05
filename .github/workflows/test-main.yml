@@ -1,6 +1,9 @@
 name: Test on Main
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -27,3 +30,15 @@ jobs:
 
       - name: Run Playwright E2E tests
         run: npm run test:e2e
+
+      - name: Build portable Windows app
+        run: npm run build:win
+
+      - name: Smoke test packaged app
+        shell: pwsh
+        run: |
+          $env:PRINTAVIEW_EXECUTABLE = (Resolve-Path 'release\win-unpacked\PrintaView.exe').Path
+          if (-not $env:PRINTAVIEW_EXECUTABLE) {
+            throw 'Packaged application executable was not produced.'
+          }
+          npm run test:packaged
