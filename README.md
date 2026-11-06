@@ -1,35 +1,37 @@
 # PrintaView
 
-PrintaView is a standalone Windows desktop app for browsing and previewing files from your Downloads folder in one unified view (including all subfolders).
+PrintaView is a standalone Windows desktop app for browsing and previewing files from your Downloads folder in one unified view (including all sub-folders).
 
-![App](./images/app.jpg)
+![App](./images/app1.png)
+![App](./images/app2.png)
 
-*Main application view*
+*Main application view with and without details pane
 
-![Right-click Menu](./images/rightclick.jpg)
+![Right-click Menu](./images/right-click.png)
 
-*Right-click context menu with hide and favorite actions*
+*Right-click context menu with hide and favourite actions*
 
-![Settings](./images/settings.png)
+![Settings](./images/settings1.png)
+![Settings](./images/settings2.png)
+![Settings](./images/settings3.png)
+![Settings](./images/settings4.png)
 
-*Settings window, including hidden files toggle*
+*Settings window tabs*
 
 ## Features
 
-- Recursive file browser for your configured root folder (defaults to `Downloads`, with `Change folder` beside the current path).
-- Shows supported files only: images (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`, `psd`) and `pdf`.
-- PSD previews use the embedded JPEG thumbnail when one is available.
-- Image thumbnails and generated PDF first-page thumbnails (with page count).
-- Generic type tiles for supported non-image/non-PDF files (for example `docx` and `pptx`).
-- Right-click actions: `Open`, `Show in Windows Explorer`, `Favorite`/`Unfavorite`, and `Hide`/`Unhide`.
-- Favorites workflow with toolbar filter toggle (`All` / `Favorites`).
-- Hidden items are app-managed (do not change the Windows hidden attribute), with `Show Hidden Files`, per-item unhide, and `Clear All Hidden Items` in Settings.
-- Sort options: `Newest`, `Oldest`, `Name`, and `Type` (with expandable type groups).
-- Adjustable preview size slider.
-- Optional details pane with file metadata and configurable left/right pane position.
-- Duplicate review shows matching files side by side; selecting one shows its preview and details. Per-file icons open it, show its folder, or move it to the Recycle Bin.
-- File action icons appear on hover in regular browsing and Duplicate Review.
-- Theme selection (`Default`, `Pastel Pink`, `Baby Blue`) in Settings.
+- Recursive browsing of a selected root folder, defaulting to `Downloads` and allowing quick folder changes.
+- Preview-first browsing for common file types, including images (`png`, `jpg`, `jpeg`, `bmp`, `gif`, `webp`, `tif`, `tiff`, `ico`, `psd`) and `pdf`.
+- Fast thumbnail generation for images and PDF cover pages, with page counts for multi-page PDFs.
+- Generic preview tiles for supported non-image file types such as `docx` and `pptx`.
+- Search and filtering by file type, favourites, modification date, and file size.
+- Sort options for `Newest`, `Oldest`, `Name`, and `Type`, with type-grouped browsing.
+- Favourites workflow with a simple `All` / `Favourites` toggle and per-item favourite actions.
+- Hidden file management that stays inside the app instead of changing the Windows hidden attribute; includes `Show Hidden Files`, per-item unhide, and clear-all support.
+- Duplicate review that compares matching files side by side and lets you preview, open, reveal, or delete them.
+- Optional details pane with metadata, adjustable preview size, and configurable left/right placement.
+- Keyboard and mouse-friendly actions for opening files, revealing them in Explorer, and moving them to the Recycle Bin.
+- Settings for theme selection (`Default`, `Pastel Pink`, `Baby Blue`), default file type filters, custom extensions, and per-user app preferences.
 
 ## Development
 
@@ -63,7 +65,7 @@ Build output is written to the `release` folder as a portable executable that ca
 
 ## Microsoft Store Release
 
-After the `Test on Main` workflow succeeds, semantic-release analyzes commits on `main`. When they require a release, it automatically updates the package version, creates a `vX.Y.Z` tag and a GitHub release titled `PrintaView vX.Y.Z`, then builds an unsigned MSIX and portable EXE. The portable EXE is attached to the GitHub release, while the MSIX is submitted directly to Microsoft Store and is not published as a release download. The Store signs the package; no signing certificate is needed.
+After the `Test on Main` workflow succeeds, semantic-release analyses commits on `main`. When they require a release, it automatically updates the package version, creates a `vX.Y.Z` tag and a GitHub release titled `PrintaView vX.Y.Z`, then builds an unsigned MSIX and portable EXE. The portable EXE is attached to the GitHub release, while the MSIX is submitted directly to Microsoft Store and is not published as a release download. The Store signs the package; no signing certificate is needed.
 
 Before the first release:
 

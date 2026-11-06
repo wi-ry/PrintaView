@@ -276,7 +276,7 @@ function getVisibleItems() {
 function getActiveFilters() {
   const active = [];
   if (filters.favorites !== 'all') {
-    active.push({ key: 'favorites', label: 'Favorites' });
+    active.push({ key: 'favorites', label: 'Favourites' });
   }
   const isDefaultTypeSelection = filters.types.length === defaultFileTypes.length &&
     defaultFileTypes.every((type) => filters.types.includes(type));
@@ -782,7 +782,7 @@ function buildCard(item) {
     const favoriteBadge = document.createElement('div');
     favoriteBadge.className = 'favorite-badge';
     favoriteBadge.textContent = '★';
-    favoriteBadge.title = 'Favorite';
+    favoriteBadge.title = 'Favourite';
     card.appendChild(favoriteBadge);
   }
 
@@ -807,7 +807,7 @@ function buildCard(item) {
     contextMenuTargetPath = item.path;
     contextMenuTargetHidden = item.hiddenByApp;
     contextMenuTargetFavorite = item.favoritedByApp;
-    toggleFavoriteButton.textContent = item.favoritedByApp ? 'Unfavorite' : 'Favorite';
+    toggleFavoriteButton.textContent = item.favoritedByApp ? 'Unfavourite' : 'Favourite';
     toggleHideButton.textContent = item.hiddenByApp ? 'Unhide' : 'Hide';
     contextMenu.style.left = `${event.clientX}px`;
     contextMenu.style.top = `${event.clientY}px`;
