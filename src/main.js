@@ -246,7 +246,7 @@ function loadSettings() {
     const parsed = JSON.parse(raw);
     const allowedSort = new Set(['recent', 'oldest', 'name', 'type']);
     const allowedFavoritesFilter = new Set(['all', 'favorites']);
-    const allowedThemes = new Set(['default', 'pastel-pink', 'baby-blue', 'dark']);
+    const allowedThemes = new Set(['default', 'pastel-pink', 'baby-blue', 'dark', 'terminal']);
     return {
       showDetailsPane: parsed.showDetailsPane !== false,
       showHidden: parsed.showHidden === true,

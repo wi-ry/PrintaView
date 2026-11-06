@@ -2,21 +2,34 @@
 
 PrintaView is a standalone Windows desktop app for browsing and previewing files from your Downloads folder in one unified view (including all sub-folders).
 
-![App](./images/app1.png)
-![App](./images/app2.png)
+![Main application with the file details pane hidden](./images/app1.png)
+![Main application with the file details pane](./images/app2.png)
 
-*Main application view with and without details pane
+*Main application view with and without the details pane*
 
-![Right-click Menu](./images/right-click.png)
+![File right-click context menu](./images/right-click.png)
 
 *Right-click context menu with hide and favourite actions*
 
-![Settings](./images/settings1.png)
-![Settings](./images/settings2.png)
-![Settings](./images/settings3.png)
-![Settings](./images/settings4.png)
+![Appearance settings tab](./images/settings1.png)
+![File Types settings tab](./images/settings2.png)
+![Hidden Files settings tab](./images/settings3.png)
+![About settings tab](./images/settings4.png)
 
-*Settings window tabs*
+*The four settings tabs*
+
+Refresh these screenshots from the bundled sample images in `images/staging/` with:
+
+```sh
+npm run screenshots
+```
+
+To use a different demo folder, pass its path:
+
+```sh
+npm run screenshots -- "path/to/PrintaView Demo Images"
+```
+
 
 ## Features
 

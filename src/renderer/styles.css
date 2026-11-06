@@ -87,6 +87,38 @@
   --warning: #ffc078;
 }
 
+:root[data-theme='terminal'] {
+  color-scheme: dark;
+  --bg: #101510;
+  --panel: #192019;
+  --surface: #222a22;
+  --ink: #d4e4d0;
+  --ink-soft: #91a58d;
+  --accent: #347f45;
+  --accent-strong: #91d789;
+  --line: #354236;
+  --shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  --bg-grad-1: #1d2b1d;
+  --bg-grad-2: #172219;
+  --bg-grad-base-start: #131a14;
+  --bg-grad-base-end: #0c110d;
+  --toolbar-bg: rgba(25, 32, 25, 0.94);
+  --path-row-bg: rgba(25, 32, 25, 0.78);
+  --focus-shadow: 0 0 0 2px rgba(120, 200, 117, 0.3);
+  --card-hover-shadow: 0 12px 28px rgba(0, 0, 0, 0.48);
+  --action-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --danger: #ff958c;
+  --danger-bg: #482b28;
+  --warning: #f0c879;
+}
+
+:root[data-theme='terminal'] .title,
+:root[data-theme='terminal'] .path-value,
+:root[data-theme='terminal'] .detail-value.path {
+  font-family: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+}
+
 * {
   box-sizing: border-box;
 }

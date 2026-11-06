@@ -164,6 +164,10 @@
         background: linear-gradient(160deg, #292f39 0%, #15191f 100%);
         border-color: rgba(255, 255, 255, 0.2);
       }
+      .theme-swatch.terminal {
+        background: linear-gradient(160deg, #1d2b1d 0%, #0c110d 100%);
+        border-color: rgba(145, 215, 137, 0.4);
+      }
       .pane-position-toggle {
         display: flex;
         gap: 8px;
@@ -361,6 +365,11 @@
                 <input type="radio" name="theme" value="dark" />
                 <span class="theme-label">Dark</span>
                 <span class="theme-swatch dark" aria-hidden="true"></span>
+              </label>
+              <label class="theme-option">
+                <input type="radio" name="theme" value="terminal" />
+                <span class="theme-label">Terminal</span>
+                <span class="theme-swatch terminal" aria-hidden="true"></span>
               </label>
             </div>
           </div>
