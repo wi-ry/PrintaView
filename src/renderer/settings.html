@@ -160,6 +160,10 @@
       .theme-swatch.baby-blue {
         background: linear-gradient(160deg, #e6f0fb 0%, #d8e5f4 100%);
       }
+      .theme-swatch.dark {
+        background: linear-gradient(160deg, #292f39 0%, #15191f 100%);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
       .pane-position-toggle {
         display: flex;
         gap: 8px;
@@ -242,7 +246,7 @@
       }
       #clear-all-hidden:hover {
         border-color: var(--accent);
-        background: rgba(6, 102, 122, 0.08);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
       }
       .about-content {
         text-align: center;
@@ -315,7 +319,7 @@
       }
       .settings-buttons #cancel-btn:hover {
         border-color: var(--accent);
-        background: rgba(6, 102, 122, 0.08);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
       }
     </style>
   </head>
@@ -352,6 +356,11 @@
                 <input type="radio" name="theme" value="baby-blue" />
                 <span class="theme-label">Baby Blue</span>
                 <span class="theme-swatch baby-blue" aria-hidden="true"></span>
+              </label>
+              <label class="theme-option">
+                <input type="radio" name="theme" value="dark" />
+                <span class="theme-label">Dark</span>
+                <span class="theme-swatch dark" aria-hidden="true"></span>
               </label>
             </div>
           </div>

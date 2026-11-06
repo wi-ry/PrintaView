@@ -1419,7 +1419,7 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-window.addEventListener('focus', async () => {
+window.printaViewApi.onSettingsUpdated(async () => {
   if (isFindingDuplicates || duplicateGroups !== null) return;
   await refreshFromSettings();
 });
