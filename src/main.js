@@ -680,9 +680,9 @@ ipcMain.handle('settings:get', () => {
   return loadSettings();
 });
 
-ipcMain.handle('settings:save', (_event, payload = {}) => {
+ipcMain.handle('settings:save', (event, payload = {}) => {
   saveSettings(payload);
-  if (mainWindow && !mainWindow.isDestroyed()) {
+  if (mainWindow && !mainWindow.isDestroyed() && event.sender !== mainWindow.webContents) {
     mainWindow.webContents.send('settings:updated');
   }
   return { ok: true };
