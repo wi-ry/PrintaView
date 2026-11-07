@@ -1,4 +1,7 @@
-# PrintaView
+<h1>
+  <img src="./images/icon-71x71.png" alt="PrintaView icon" width="71" align="center" />
+  PrintaView
+</h1>
 
 PrintaView is a standalone Windows desktop app for browsing and previewing files from your Downloads folder in one unified view (including all sub-folders).
 
