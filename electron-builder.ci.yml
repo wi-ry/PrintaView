@@ -1,2 +1,0 @@
-extends: ./package.json
-compression: normal
