@@ -6,6 +6,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const gridElement = document.getElementById('grid');
+const toolbarElement = document.querySelector('.toolbar');
 const loadingStateElement = document.getElementById('loading-state');
 const loadingMessageElement = document.getElementById('loading-message');
 const downloadsPathElement = document.getElementById('downloads-path');
@@ -82,14 +83,19 @@ async function saveDetailsPaneWidth() {
   }
 }
 
-function setSortBy(value) {
-  const option = sortPopover.querySelector(`[data-sort-value="${value}"]`);
-  if (!option) return;
-
-  sortButton.dataset.sortValue = value;
-  sortValueLabel.textContent = option.textContent;
-  sortPopover.querySelectorAll('[data-sort-value]').forEach((item) => {
-    item.setAttribute('aria-checked', item === option ? 'true' : 'false');
+function setSortOptions(sortBy, sortOrder) {
+  const sortByOption = sortPopover.querySelector(`[data-sort-by="${sortBy}"]`);
+  const sortOrderOption = sortPopover.querySelector(`[data-sort-order="${sortOrder}"]`);
+  if (!sortByOption || !sortOrderOption) return;
+  sortButton.dataset.sortBy = sortBy;
+  sortButton.dataset.sortOrder = sortOrder;
+  sortValueLabel.textContent = `${sortByOption.textContent} ${sortOrder === 'ascending' ? '↑' : '↓'}`;
+  sortButton.setAttribute('aria-label', `Sort by ${sortByOption.textContent}, ${sortOrder}`);
+  sortPopover.querySelectorAll('[data-sort-by]').forEach((item) => {
+    item.setAttribute('aria-checked', item === sortByOption ? 'true' : 'false');
+  });
+  sortPopover.querySelectorAll('[data-sort-order]').forEach((item) => {
+    item.setAttribute('aria-checked', item === sortOrderOption ? 'true' : 'false');
   });
 }
 
@@ -194,7 +200,10 @@ async function getPdfThumbnailData(item) {
 }
 
 function formatDate(value) {
-  return new Date(value).toLocaleString();
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) && timestamp > 0
+    ? new Date(timestamp).toLocaleString()
+    : '—';
 }
 
 function formatSize(bytes) {
@@ -337,7 +346,8 @@ function updateFilterUI() {
 
 function saveMainViewPreferences() {
   window.printaViewApi.saveSettings({
-    sortBy: sortButton.dataset.sortValue,
+    sortBy: sortButton.dataset.sortBy,
+    sortOrder: sortButton.dataset.sortOrder,
     filters
   });
 }
@@ -370,7 +380,8 @@ function updateDetailsPaneFromItem(item) {
   document.getElementById('detail-size').textContent = formatSize(item.size);
   const dimensionsElement = document.getElementById('detail-dimensions');
   dimensionsElement.textContent = '—';
-  document.getElementById('detail-modified').textContent = formatDate(item.createdTimeMs || item.modifiedTimeMs);
+  document.getElementById('detail-created').textContent = formatDate(item.createdTimeMs);
+  document.getElementById('detail-modified').textContent = formatDate(item.modifiedTimeMs);
   document.getElementById('detail-path').textContent = item.path;
 
   if (item.previewType === 'image' || item.previewType === 'tiff' || item.previewType === 'psd') {
@@ -404,6 +415,7 @@ function clearDetailsPane() {
   document.getElementById('detail-type').textContent = '-';
   document.getElementById('detail-size').textContent = '-';
   document.getElementById('detail-dimensions').textContent = '-';
+  document.getElementById('detail-created').textContent = '-';
   document.getElementById('detail-modified').textContent = '-';
   document.getElementById('detail-path').textContent = '-';
 }
@@ -542,8 +554,8 @@ function getDuplicateItem(file) {
     itemType: 'file',
     previewType: 'generic',
     size: file.size || 0,
-    createdTimeMs: file.modifiedTimeMs || 0,
-    modifiedTimeMs: file.modifiedTimeMs || 0
+    createdTimeMs: file.createdTimeMs ?? null,
+    modifiedTimeMs: file.modifiedTimeMs ?? 0
   };
 }
 
@@ -844,6 +856,7 @@ function renderDuplicateGroups() {
   gridElement.classList.remove('grouped-by-date');
   gridElement.classList.add('grouped-by-duplicates');
   duplicateToolbar.hidden = false;
+  toolbarElement.classList.add('duplicates-active');
   duplicateWarning.hidden = duplicateSkippedFiles.length === 0;
   duplicateWarning.textContent = duplicateSkippedFiles.length > 0
     ? `Skipped ${duplicateSkippedFiles.length} unreadable file${duplicateSkippedFiles.length === 1 ? '' : 's'}; results may be incomplete.`
@@ -917,8 +930,9 @@ function renderItems() {
   duplicateToolbar.hidden = true;
   document.getElementById('detail-preview').hidden = true;
   updateFilterUI();
-  const sortBy = sortButton.dataset.sortValue;
-  const sorted = itemUtils.sortItems(getVisibleItems(), sortBy);
+  const sortBy = sortButton.dataset.sortBy;
+  const sortOrder = sortButton.dataset.sortOrder;
+  const sorted = itemUtils.sortItems(getVisibleItems(), sortBy, sortOrder);
 
   if (sorted.length === 0) {
     updateGridStatus(
@@ -939,9 +953,9 @@ function renderItems() {
     return;
   }
 
-  if (sortBy === 'recent' || sortBy === 'oldest') {
+  if (sortBy === 'created' || sortBy === 'modified') {
     gridElement.classList.remove('grouped-by-type');
-    renderGroupedItems(sorted, 'date', (item) => itemUtils.getDateGroup(item), (key) => key);
+    renderGroupedItems(sorted, 'date', (item) => itemUtils.getDateGroup(item, Date.now(), sortBy), (key) => key);
     return;
   }
 
@@ -984,7 +998,7 @@ async function applySettingsFromStore() {
   }, defaultFileTypes);
 
   if (settings.sortBy) {
-    setSortBy(settings.sortBy);
+    setSortOptions(settings.sortBy, settings.sortOrder || 'descending');
   }
 
   applyTheme(settings.theme || 'default');
@@ -1040,15 +1054,17 @@ sortButton.addEventListener('click', (event) => {
   sortPopover.hidden = !sortPopover.hidden;
   sortButton.setAttribute('aria-expanded', sortPopover.hidden ? 'false' : 'true');
   if (!sortPopover.hidden) {
-    sortPopover.querySelector('[aria-checked="true"]')?.focus();
+    sortPopover.querySelector('[data-sort-by][aria-checked="true"]')?.focus();
   }
 });
 
 sortPopover.addEventListener('click', (event) => {
-  const option = event.target.closest('[data-sort-value]');
+  const option = event.target.closest('[data-sort-by], [data-sort-order]');
   if (!option) return;
-
-  setSortBy(option.dataset.sortValue);
+  setSortOptions(
+    option.dataset.sortBy || sortButton.dataset.sortBy,
+    option.dataset.sortOrder || sortButton.dataset.sortOrder
+  );
   sortPopover.hidden = true;
   sortButton.setAttribute('aria-expanded', 'false');
   renderItems();
@@ -1057,7 +1073,7 @@ sortPopover.addEventListener('click', (event) => {
 });
 
 sortPopover.addEventListener('keydown', (event) => {
-  const options = Array.from(sortPopover.querySelectorAll('[data-sort-value]'));
+  const options = Array.from(sortPopover.querySelectorAll('[data-sort-by], [data-sort-order]'));
   const currentIndex = options.indexOf(document.activeElement);
   let nextIndex;
 
@@ -1124,6 +1140,12 @@ filterButton.addEventListener('click', (event) => {
   sortButton.setAttribute('aria-expanded', 'false');
   filterPopover.hidden = !filterPopover.hidden;
   filterButton.setAttribute('aria-expanded', filterPopover.hidden ? 'false' : 'true');
+  if (!filterPopover.hidden) {
+    const buttonBounds = filterButton.getBoundingClientRect();
+    const popoverWidth = filterPopover.getBoundingClientRect().width;
+    const rightOverflow = buttonBounds.left + popoverWidth - (window.innerWidth - 18);
+    filterPopover.style.left = `${Math.min(0, -rightOverflow)}px`;
+  }
 });
 
 favoritesFilter.addEventListener('change', () => {
@@ -1188,12 +1210,14 @@ document.getElementById('find-duplicates-button').addEventListener('click', asyn
     duplicateGroups = null;
     duplicateSkippedFiles = [];
     duplicateToolbar.hidden = true;
+    toolbarElement.classList.remove('duplicates-active');
     updateGridStatus(`Could not find duplicates: ${error.message}`);
   }
 });
 
 document.getElementById('duplicate-back-button').addEventListener('click', () => {
   duplicateGroups = null;
+  toolbarElement.classList.remove('duplicates-active');
   gridElement.classList.remove('grouped-by-duplicates');
   renderItems();
   const visibleItems = getVisibleItems();

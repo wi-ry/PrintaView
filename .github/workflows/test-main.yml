@@ -20,16 +20,20 @@ jobs:
     name: Unit tests
     runs-on: windows-latest
     timeout-minutes: 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
+
       - name: Install dependencies
         run: npm ci
+
       - name: Run unit tests
         run: npm test
 
@@ -37,18 +41,23 @@ jobs:
     name: Playwright E2E
     runs-on: windows-latest
     timeout-minutes: 20
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
+
       - name: Install dependencies
         run: npm ci
+
       - name: Run Playwright E2E tests
         run: npm run test:e2e
+
       - name: Upload Playwright failure artifacts
         if: always()
         uses: actions/upload-artifact@v6
@@ -59,27 +68,33 @@ jobs:
           retention-days: 7
 
   build-portable:
-    name: Build and smoke test portable app
+    name: Build Portable
     runs-on: windows-latest
     timeout-minutes: 30
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build portable Windows app
         run: npm run build:win
+
       - name: Smoke test packaged app
         shell: pwsh
         run: |
           $executable = Resolve-Path 'release\win-unpacked\PrintaView.exe' -ErrorAction Stop
           $env:PRINTAVIEW_EXECUTABLE = $executable.Path
           npm run test:packaged
+
       - name: Upload portable Windows build
         if: always()
         uses: actions/upload-artifact@v6

@@ -17,16 +17,25 @@
           <label id="sort-label">Sort</label>
           <div class="sort-control toolbar-dropdown-control">
             <button id="sort-select" class="toolbar-dropdown-button" type="button"
-              aria-label="Sort" aria-haspopup="menu" aria-expanded="false" aria-controls="sort-popover"
-              data-sort-value="recent">
-              <span id="sort-value-label">Newest</span>
+              aria-label="Sort by Date Modified, Descending" aria-haspopup="menu" aria-expanded="false" aria-controls="sort-popover"
+              data-sort-by="modified" data-sort-order="descending">
+              <span id="sort-value-label">Date Modified ↓</span>
             </button>
             <div id="sort-popover" class="sort-popover toolbar-popover" role="menu"
               aria-labelledby="sort-label" hidden>
-              <button type="button" role="menuitemradio" aria-checked="true" data-sort-value="recent">Newest</button>
-              <button type="button" role="menuitemradio" aria-checked="false" data-sort-value="oldest">Oldest</button>
-              <button type="button" role="menuitemradio" aria-checked="false" data-sort-value="name">Name</button>
-              <button type="button" role="menuitemradio" aria-checked="false" data-sort-value="type">Type</button>
+              <div class="sort-menu-section" role="group" aria-labelledby="sort-by-heading">
+                <span id="sort-by-heading" class="sort-menu-heading">Sort by</span>
+                <button type="button" role="menuitemradio" aria-checked="false" data-sort-by="name">Name</button>
+                <button type="button" role="menuitemradio" aria-checked="true" data-sort-by="modified">Date Modified</button>
+                <button type="button" role="menuitemradio" aria-checked="false" data-sort-by="created">Date Created</button>
+                <button type="button" role="menuitemradio" aria-checked="false" data-sort-by="type">Type</button>
+              </div>
+              <div class="sort-menu-divider" aria-hidden="true"></div>
+              <div class="sort-menu-section" role="group" aria-labelledby="sort-order-heading">
+                <span id="sort-order-heading" class="sort-menu-heading">Order</span>
+                <button type="button" role="menuitemradio" aria-checked="false" data-sort-order="ascending">Ascending</button>
+                <button type="button" role="menuitemradio" aria-checked="true" data-sort-order="descending">Descending</button>
+              </div>
             </div>
           </div>
         </div>
@@ -165,7 +174,11 @@
               <span id="detail-dimensions" class="detail-value">—</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Modified:</span>
+              <span class="detail-label">Date Created:</span>
+              <span id="detail-created" class="detail-value">—</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Date Modified:</span>
               <span id="detail-modified" class="detail-value">—</span>
             </div>
             <div class="detail-item">

@@ -22,7 +22,7 @@ test('getDateGroup classifies today, this week, last week, this year, and older 
   const now = new Date(2026, 4, 20, 12).getTime();
   const itemAt = (year, month, day) => ({ createdTimeMs: new Date(year, month, day, 9).getTime() });
 
-  assert.equal(getDateGroup(itemAt(2026, 4, 20), now), 'Today');
+  assert.equal(getDateGroup(itemAt(2026, 4, 20), now, 'created'), 'Today');
   assert.equal(getDateGroup(itemAt(2026, 4, 19), now), 'This week');
   assert.equal(getDateGroup(itemAt(2026, 4, 11), now), 'Last week');
   assert.equal(getDateGroup(itemAt(2026, 1, 2), now), 'Earlier this year');
@@ -132,26 +132,58 @@ test('filterItems applies inclusive 1–10 MB bounds and separates TIFF from ima
   );
 });
 
-test('sortItems sorts by most recent when sortBy is recent', () => {
+test('sortItems sorts by modified date in either direction', () => {
   const items = [
-    { name: 'A', createdTimeMs: 100 },
-    { name: 'B', createdTimeMs: 300 },
-    { name: 'C', createdTimeMs: 200 }
+    { name: 'created-latest', createdTimeMs: 900, modifiedTimeMs: 100 },
+    { name: 'modified-latest', createdTimeMs: 100, modifiedTimeMs: 900 },
+    { name: 'middle', createdTimeMs: 500, modifiedTimeMs: 500 }
   ];
-
-  const sorted = sortItems(items, 'recent');
-  assert.deepEqual(sorted.map((item) => item.name), ['B', 'C', 'A']);
+  assert.deepEqual(sortItems(items, 'modified', 'descending').map((item) => item.name), ['modified-latest', 'middle', 'created-latest']);
+  assert.deepEqual(sortItems(items, 'modified', 'ascending').map((item) => item.name), ['created-latest', 'middle', 'modified-latest']);
 });
 
-test('sortItems sorts by oldest when sortBy is oldest', () => {
+test('sortItems sorts by created date in either direction', () => {
   const items = [
-    { name: 'A', createdTimeMs: 100 },
-    { name: 'B', createdTimeMs: 300 },
-    { name: 'C', createdTimeMs: 200 }
+    { name: 'created-latest', createdTimeMs: 900, modifiedTimeMs: 100 },
+    { name: 'modified-latest', createdTimeMs: 100, modifiedTimeMs: 900 },
+    { name: 'middle', createdTimeMs: 500, modifiedTimeMs: 500 }
+  ];
+  assert.deepEqual(sortItems(items, 'created', 'descending').map((item) => item.name), ['created-latest', 'middle', 'modified-latest']);
+  assert.deepEqual(sortItems(items, 'created', 'ascending').map((item) => item.name), ['modified-latest', 'middle', 'created-latest']);
+});
+
+test('sortItems uses the filename as a stable tie-breaker for matching dates', () => {
+  const items = [
+    { name: 'photo10.jpg', dateTakenMs: 100 },
+    { name: 'photo2.jpg', dateTakenMs: 100 },
+    { name: 'photo1.jpg', dateTakenMs: 100 }
   ];
 
-  const sorted = sortItems(items, 'oldest');
-  assert.deepEqual(sorted.map((item) => item.name), ['A', 'C', 'B']);
+  assert.deepEqual(
+    sortItems(items, 'created', 'descending').map((item) => item.name),
+    ['photo1.jpg', 'photo2.jpg', 'photo10.jpg']
+  );
+  assert.deepEqual(
+    sortItems(items, 'created', 'ascending').map((item) => item.name),
+    ['photo1.jpg', 'photo2.jpg', 'photo10.jpg']
+  );
+});
+
+test('sortItems puts files with missing selected dates last', () => {
+  const items = [
+    { name: 'missing', createdTimeMs: 900 },
+    { name: 'older', modifiedTimeMs: 100 },
+    { name: 'newer', modifiedTimeMs: 200 }
+  ];
+
+  assert.deepEqual(
+    sortItems(items, 'modified', 'descending').map((item) => item.name),
+    ['newer', 'older', 'missing']
+  );
+  assert.deepEqual(
+    sortItems(items, 'modified', 'ascending').map((item) => item.name),
+    ['older', 'newer', 'missing']
+  );
 });
 
 test('sortItems sorts by name alphabetically', () => {
@@ -161,7 +193,7 @@ test('sortItems sorts by name alphabetically', () => {
     { name: 'beta' }
   ];
 
-  const sorted = sortItems(items, 'name');
+  const sorted = sortItems(items, 'name', 'ascending');
   assert.deepEqual(sorted.map((item) => item.name), ['alpha', 'beta', 'zeta']);
 });
 
