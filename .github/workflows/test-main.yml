@@ -82,11 +82,21 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Cache Electron builder downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\electron-builder\Cache
+            ~\AppData\Local\electron\Cache
+          key: ${{ runner.os }}-electron-builder-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-builder-
+
       - name: Install dependencies
         run: npm ci
 
       - name: Build portable Windows app
-        run: npm run build:win
+        run: npm run build:win:ci
 
       - name: Smoke test packaged app
         shell: pwsh
