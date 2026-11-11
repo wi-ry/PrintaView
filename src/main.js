@@ -9,6 +9,7 @@ const { createScannedItems, normalizePathForKey } = require('./scan-items');
 const { findDuplicateGroups } = require('./duplicate-scanner');
 const { readPsdPreviewData } = require('./psd-preview');
 const itemUtils = require('./renderer/item-utils');
+const { applyWindowSecurity } = require('./window-security');
 
 let mainWindow;
 let settingsWindow;
@@ -419,6 +420,7 @@ function createMainWindow() {
   }
   
   mainWindow = new BrowserWindow(config);
+  applyWindowSecurity(mainWindow.webContents, shell);
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
@@ -455,22 +457,7 @@ function createSettingsWindow() {
   
   settingsWindow = new BrowserWindow(config);
 
-  // Open target="_blank" links in the user's default browser
-  settingsWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://') || url.startsWith('http://')) {
-      shell.openExternal(url);
-    }
-    return { action: 'deny' };
-  });
-
-  settingsWindow.webContents.on('will-navigate', (event, url) => {
-    if (url !== settingsWindow.webContents.getURL()) {
-      event.preventDefault();
-      if (url.startsWith('https://') || url.startsWith('http://')) {
-        shell.openExternal(url);
-      }
-    }
-  });
+  applyWindowSecurity(settingsWindow.webContents, shell);
 
   settingsWindow.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
 
