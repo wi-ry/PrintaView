@@ -12,52 +12,60 @@
   const FILTER_TYPES = Object.freeze(['image', 'pdf', 'tiff', 'other', 'custom']);
   const DEFAULT_FILTER_TYPES = Object.freeze(['image', 'pdf', 'tiff']);
 
-  function sortItems(items, sortBy) {
+  function getItemDateMs(item, sortBy) {
+    const value = sortBy === 'created' ? item.createdTimeMs : item.modifiedTimeMs;
+    const timestamp = Number(value);
+    return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null;
+  }
+
+  function sortItems(items, sortBy, sortOrder = 'ascending') {
     const copy = [...items];
+    const direction = sortOrder === 'descending' ? -1 : 1;
+    const compareNames = (a, b) => a.name.localeCompare(
+      b.name,
+      undefined,
+      { numeric: true, sensitivity: 'base' }
+    );
 
     if (sortBy === 'name') {
-      copy.sort((a, b) => a.name.localeCompare(b.name));
+      copy.sort((a, b) => direction * compareNames(a, b));
       return copy;
     }
 
     if (sortBy === 'type') {
       copy.sort((a, b) => {
-        const typeA = a.itemType === 'folder' ? 'folder' : a.extension;
-        const typeB = b.itemType === 'folder' ? 'folder' : b.extension;
-        const byType = typeA.localeCompare(typeB);
-        if (byType !== 0) {
-          return byType;
-        }
-        return a.name.localeCompare(b.name);
+        const typeA = a.itemType === 'folder' ? 'folder' : (a.extension || '');
+        const typeB = b.itemType === 'folder' ? 'folder' : (b.extension || '');
+        return direction * (typeA.localeCompare(typeB) || compareNames(a, b));
       });
       return copy;
     }
 
     copy.sort((a, b) => {
-      const timeA = a.createdTimeMs || 0;
-      const timeB = b.createdTimeMs || 0;
-      return sortBy === 'oldest' ? timeA - timeB : timeB - timeA;
+      const timeA = getItemDateMs(a, sortBy);
+      const timeB = getItemDateMs(b, sortBy);
+      if (timeA === null || timeB === null) {
+        if (timeA === timeB) return compareNames(a, b);
+        return timeA === null ? 1 : -1;
+      }
+      return direction * (timeA - timeB) || compareNames(a, b);
     });
     return copy;
   }
 
-  function getDateGroup(item, now = Date.now()) {
-    const timestamp = Number(item.createdTimeMs) || 0;
-    const date = new Date(timestamp);
+  function getDateGroup(item, now = Date.now(), sortBy = 'created') {
+    const timestamp = getItemDateMs(item, sortBy);
+    const date = timestamp === null ? new Date(0) : new Date(timestamp);
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
-
     const startOfThisWeek = new Date(today);
     const daysSinceMonday = (startOfThisWeek.getDay() + 6) % 7;
     startOfThisWeek.setDate(startOfThisWeek.getDate() - daysSinceMonday);
-
     if (date >= today) return 'Today';
     if (date >= startOfThisWeek) return 'This week';
-
     const startOfLastWeek = new Date(startOfThisWeek);
     startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
     if (date >= startOfLastWeek) return 'Last week';
-
     const startOfYear = new Date(today.getFullYear(), 0, 1);
     if (date >= startOfYear) return 'Earlier this year';
     return 'A long time ago';

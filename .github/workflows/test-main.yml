@@ -9,7 +9,8 @@ on:
       - main
 
 jobs:
-  test:
+  unit-tests:
+    name: Unit tests
     runs-on: windows-latest
 
     steps:
@@ -28,8 +29,51 @@ jobs:
       - name: Run unit tests
         run: npm test
 
+  playwright-e2e:
+    name: Playwright E2E
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run Playwright E2E tests
         run: npm run test:e2e
+
+      - name: Upload Playwright failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build-portable:
+    name: Build Portable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build portable Windows app
         run: npm run build:win
