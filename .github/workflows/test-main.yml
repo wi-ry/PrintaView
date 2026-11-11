@@ -8,10 +8,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit-tests:
     name: Unit tests
     runs-on: windows-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -32,6 +40,7 @@ jobs:
   playwright-e2e:
     name: Playwright E2E
     runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -61,6 +70,7 @@ jobs:
   build-portable:
     name: Build Portable
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -81,8 +91,15 @@ jobs:
       - name: Smoke test packaged app
         shell: pwsh
         run: |
-          $env:PRINTAVIEW_EXECUTABLE = (Resolve-Path 'release\win-unpacked\PrintaView.exe').Path
-          if (-not $env:PRINTAVIEW_EXECUTABLE) {
-            throw 'Packaged application executable was not produced.'
-          }
+          $executable = Resolve-Path 'release\win-unpacked\PrintaView.exe' -ErrorAction Stop
+          $env:PRINTAVIEW_EXECUTABLE = $executable.Path
           npm run test:packaged
+
+      - name: Upload portable Windows build
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: PrintaView-portable-windows
+          path: release/*-Portable.exe
+          if-no-files-found: warn
+          retention-days: 14
