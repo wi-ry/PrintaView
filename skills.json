@@ -1,0 +1,74 @@
+{
+  "skills": [
+    {
+      "name": "css-ui-review",
+      "path": "./.agents/skills/css-ui-review",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "documentation",
+      "path": "./.agents/skills/documentation",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "electron",
+      "path": "./.agents/skills/electron",
+      "source": "vercel-labs/agent-browser"
+    },
+    {
+      "name": "frontend-design",
+      "path": "./.agents/skills/frontend-design",
+      "source": "anthropics/anthropic-quickstarts"
+    },
+    {
+      "name": "init",
+      "path": "./.agents/skills/init",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "linting-neostandard-eslint9",
+      "path": "./.agents/skills/linting-neostandard-eslint9",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "node",
+      "path": "./.agents/skills/node",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "nodejs-core",
+      "path": "./.agents/skills/nodejs-core",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "octocat",
+      "path": "./.agents/skills/octocat",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "playwright-cli",
+      "path": "./.agents/skills/playwright-cli",
+      "source": "microsoft/playwright-cli"
+    },
+    {
+      "name": "playwright-generate-test",
+      "path": "./.agents/skills/playwright-generate-test",
+      "source": "microsoft/playwright-cli"
+    },
+    {
+      "name": "skill-optimizer",
+      "path": "./.agents/skills/skill-optimizer",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "snipgrapher",
+      "path": "./.agents/skills/snipgrapher",
+      "source": "mcollina/skills"
+    },
+    {
+      "name": "typescript-magician",
+      "path": "./.agents/skills/typescript-magician",
+      "source": "mcollina/skills"
+    }
+  ]
+}
