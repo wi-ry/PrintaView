@@ -24,7 +24,7 @@ test('denies new windows and opens HTTP(S) links externally', () => {
   assert.deepEqual(webContents.windowOpenHandler({ url: 'http://example.com' }), { action: 'deny' });
   assert.deepEqual(webContents.windowOpenHandler({ url: 'file:///etc/passwd' }), { action: 'deny' });
   assert.deepEqual(webContents.windowOpenHandler({ url: 'javascript:alert(1)' }), { action: 'deny' });
-  assert.deepEqual(openedUrls, ['https://example.com/path', 'http://example.com']);
+  assert.deepEqual(openedUrls, ['https://example.com/path', 'http://example.com/']);
 });
 
 test('blocks navigation away from the current document and opens HTTP(S) links externally', () => {
