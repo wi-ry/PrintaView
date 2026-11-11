@@ -11,6 +11,9 @@ module.exports = defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    actionTimeout: 5000
+    actionTimeout: 5000,
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure'
   }
 });
