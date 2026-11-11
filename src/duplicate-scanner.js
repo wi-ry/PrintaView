@@ -75,7 +75,9 @@ async function findDuplicateGroups(entries, concurrency = 4) {
       size: Number(group[0].size ?? group[0].stats?.size),
       files: group.map((entry) => ({
         path: entry.path ?? entry.absolutePath,
-        name: entry.name ?? path.basename(entry.path ?? entry.absolutePath)
+        name: entry.name ?? path.basename(entry.path ?? entry.absolutePath),
+        createdTimeMs: entry.createdTimeMs ?? entry.stats?.birthtimeMs ?? null,
+        modifiedTimeMs: entry.modifiedTimeMs ?? entry.stats?.mtimeMs ?? null
       })).sort((a, b) => a.path.localeCompare(b.path))
     }))
     .sort((a, b) => a.files[0].path.localeCompare(b.files[0].path));

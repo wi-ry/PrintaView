@@ -156,6 +156,12 @@ body {
   backdrop-filter: blur(7px);
 }
 
+.toolbar.duplicates-active > .toolbar-group,
+.toolbar.duplicates-active > .filter-control,
+.toolbar.duplicates-active > #refresh-button {
+  display: none;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
@@ -297,8 +303,24 @@ button:hover {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
+  box-sizing: border-box;
+  width: 122px;
   min-width: 122px;
+  flex: 0 0 122px;
   gap: 8px;
+}
+
+#sort-select {
+  width: 160px;
+  min-width: 160px;
+  flex-basis: 160px;
+}
+
+#sort-value-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar-dropdown-button::after {
@@ -332,7 +354,26 @@ button:hover {
 
 .sort-popover {
   left: 0;
-  width: 170px;
+  width: 190px;
+}
+
+.sort-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sort-menu-heading {
+  padding: 2px 8px;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sort-menu-divider {
+  height: 1px;
+  margin: 2px 0;
+  background: var(--line);
 }
 
 .sort-popover button {
@@ -364,7 +405,7 @@ button:hover {
 }
 
 .filter-popover {
-  right: 0;
+  left: 0;
   width: 260px;
   gap: 8px;
   padding: 14px;
@@ -561,6 +602,10 @@ button:hover {
   top: 12px;
   right: 12px;
   align-self: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition: opacity 100ms ease, transform 100ms ease;
 }
 
 .duplicate-file:hover .duplicate-file-actions,

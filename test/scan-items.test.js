@@ -35,6 +35,8 @@ test('createScannedItems maps path metadata, preview types, hidden ancestry, and
   ]);
   assert.equal(items[1].extension, '.png');
   assert.equal(items[1].size, 12);
+  assert.equal(items[1].modifiedTimeMs, 20);
+  assert.equal(items[1].createdTimeMs, 10);
   assert.equal(items[1].parentPath, folderPath);
   assert.equal(items[1].hiddenByApp, true);
   assert.equal(items[1].favoritedByApp, true);

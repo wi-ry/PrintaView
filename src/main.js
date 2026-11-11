@@ -233,7 +233,8 @@ function loadSettings() {
       showHidden: false,
       panePosition: 'right',
       detailsPaneWidth: 320,
-      sortBy: 'recent',
+      sortBy: 'modified',
+      sortOrder: 'descending',
       favoritesFilter: 'all',
       filters: null,
       defaultFileTypes: ['image', 'pdf', 'tiff'],
@@ -244,7 +245,21 @@ function loadSettings() {
   try {
     const raw = fs.readFileSync(settingsPath, 'utf8');
     const parsed = JSON.parse(raw);
-    const allowedSort = new Set(['recent', 'oldest', 'name', 'type']);
+    const allowedSortBy = new Set(['name', 'modified', 'created', 'type']);
+    const allowedSortOrder = new Set(['ascending', 'descending']);
+    const legacySort = {
+      recent: { sortBy: 'modified', sortOrder: 'descending' },
+      oldest: { sortBy: 'modified', sortOrder: 'ascending' },
+      'modified-newest': { sortBy: 'modified', sortOrder: 'descending' },
+      'modified-oldest': { sortBy: 'modified', sortOrder: 'ascending' },
+      'created-newest': { sortBy: 'created', sortOrder: 'descending' },
+      'created-oldest': { sortBy: 'created', sortOrder: 'ascending' }
+    };
+    const migratedSort = legacySort[parsed.sortBy] || {};
+    const sortBy = allowedSortBy.has(parsed.sortBy) ? parsed.sortBy : (migratedSort.sortBy || 'modified');
+    const defaultSortOrder = migratedSort.sortOrder ||
+      (sortBy === 'modified' || sortBy === 'created' ? 'descending' : 'ascending');
+    const sortOrder = allowedSortOrder.has(parsed.sortOrder) ? parsed.sortOrder : defaultSortOrder;
     const allowedFavoritesFilter = new Set(['all', 'favorites']);
     const allowedThemes = new Set(['default', 'pastel-pink', 'baby-blue', 'dark', 'terminal']);
     return {
@@ -252,7 +267,8 @@ function loadSettings() {
       showHidden: parsed.showHidden === true,
       panePosition: parsed.panePosition || 'right',
       detailsPaneWidth: normalizeDetailsPaneWidth(parsed.detailsPaneWidth),
-      sortBy: allowedSort.has(parsed.sortBy) ? parsed.sortBy : 'recent',
+      sortBy,
+      sortOrder,
       favoritesFilter: allowedFavoritesFilter.has(parsed.favoritesFilter) ? parsed.favoritesFilter : 'all',
       filters: parsed.filters && typeof parsed.filters === 'object' ? parsed.filters : null,
       defaultFileTypes: Array.isArray(parsed.defaultFileTypes)
@@ -267,7 +283,8 @@ function loadSettings() {
       showHidden: false,
       panePosition: 'right',
       detailsPaneWidth: 320,
-      sortBy: 'recent',
+      sortBy: 'modified',
+      sortOrder: 'descending',
       favoritesFilter: 'all',
       filters: null,
       defaultFileTypes: ['image', 'pdf', 'tiff'],
@@ -507,10 +524,11 @@ ipcMain.handle('items:findDuplicates', async (_event, payload = {}) => {
   const files = createScannedItems(entries, hiddenSet, favoriteSet, includeHidden)
     .filter((item) => item.itemType === 'file')
     .filter((item) => selectedTypes.includes(itemUtils.getItemType(item, customExtensions)))
-    .map(({ path: filePath, name, size, modifiedTimeMs }) => ({
+    .map(({ path: filePath, name, size, createdTimeMs, modifiedTimeMs }) => ({
       path: filePath,
       name,
       size,
+      createdTimeMs,
       modifiedTimeMs
     }));
   return findDuplicateGroups(files);

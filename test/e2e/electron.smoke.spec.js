@@ -136,8 +136,12 @@ test('main window loads and settings window opens', async () => {
       getComputedStyle(button).height)).toBe(await mainWindow.locator('#filter-button').evaluate((button) =>
       getComputedStyle(button).height));
     expect(await mainWindow.locator('#sort-select').evaluate((button) =>
-      getComputedStyle(button).width)).toBe(await mainWindow.locator('#filter-button').evaluate((button) =>
-      getComputedStyle(button).width));
+      parseFloat(getComputedStyle(button).width))).toBeGreaterThan(
+      parseFloat(await mainWindow.locator('#filter-button').evaluate((button) =>
+        getComputedStyle(button).width))
+    );
+    expect(await mainWindow.locator('#sort-value-label').evaluate((label) =>
+      label.scrollWidth <= label.clientWidth)).toBe(true);
     expect(await mainWindow.locator('#sort-select').evaluate((button) =>
       getComputedStyle(button, '::after').content)).not.toBe('none');
     expect(await mainWindow.locator('#filter-button').evaluate((button) =>
@@ -273,8 +277,11 @@ test('sort and filter dropdown popovers stay anchored without shifting the toolb
     await sortButton.click();
     await expect(sortPopover).toBeVisible();
     await expect(sortPopover).toHaveCSS('position', 'absolute');
-    await expect(sortPopover.getByRole('menuitemradio')).toHaveCount(4);
-    await expect(sortPopover.getByRole('menuitemradio', { name: 'Newest' })).toHaveAttribute('aria-checked', 'true');
+    await expect(sortPopover.getByRole('menuitemradio')).toHaveCount(6);
+    await expect(sortPopover.getByRole('group', { name: 'Sort by' }).getByRole('menuitemradio')).toHaveCount(4);
+    await expect(sortPopover.getByRole('group', { name: 'Order' }).getByRole('menuitemradio')).toHaveCount(2);
+    await expect(sortPopover.locator('[data-sort-by="modified"]')).toHaveAttribute('aria-checked', 'true');
+    await expect(sortPopover.locator('[data-sort-order="descending"]')).toHaveAttribute('aria-checked', 'true');
     const sortAnchor = await sortButton.boundingBox();
     const sortMenu = await sortPopover.boundingBox();
     expect(Math.abs(sortMenu.x - sortAnchor.x)).toBeLessThanOrEqual(1);
@@ -289,7 +296,10 @@ test('sort and filter dropdown popovers stay anchored without shifting the toolb
     await expect(filterPopover.locator('fieldset input[name="file-type"]')).toHaveCount(5);
     const filterAnchor = await filterButton.boundingBox();
     const filterMenu = await filterPopover.boundingBox();
-    expect(Math.abs(filterMenu.x + filterMenu.width - filterAnchor.x - filterAnchor.width)).toBeLessThanOrEqual(1);
+    const viewportWidth = await mainWindow.evaluate(() => window.innerWidth);
+    expect(filterMenu.x).toBeGreaterThanOrEqual(0);
+    expect(filterMenu.x + filterMenu.width).toBeLessThanOrEqual(viewportWidth - 17);
+    expect(filterMenu.x).toBeLessThanOrEqual(filterAnchor.x);
     expect(Math.abs(filterMenu.y - filterAnchor.y - filterAnchor.height - 8)).toBeLessThanOrEqual(1);
     expect(await toolbar.boundingBox()).toEqual(initialToolbarBox);
 
@@ -665,7 +675,7 @@ test('search filters cards and the clear button restores them', async () => {
   }
 });
 
-test('name sort orders cards alphabetically', async () => {
+test('sort field and order selections are independent and persist', async () => {
   const fixtureRoot = setupFixtureRoot(
     fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
   );
@@ -679,21 +689,28 @@ test('name sort orders cards alphabetically', async () => {
     await expect(cards).toHaveCount(3);
 
     await mainWindow.locator('#sort-select').click();
-    await mainWindow.locator('#sort-popover [data-sort-value="name"]').click();
-    await expect(cards.locator('.title')).toHaveText(['alpha.pdf', 'sample.pdf', 'zeta.pdf']);
+    await mainWindow.locator('#sort-popover [data-sort-by="name"]').click();
+    await expect(cards.locator('.title')).toHaveText(['zeta.pdf', 'sample.pdf', 'alpha.pdf']);
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-by', 'name');
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-order', 'descending');
 
-    await expect(mainWindow.locator('#sort-popover [data-sort-value="recent"]')).toHaveText('Newest');
-    await expect(mainWindow.locator('#sort-popover [data-sort-value="oldest"]')).toHaveText('Oldest');
     await mainWindow.locator('#sort-select').click();
-    await mainWindow.locator('#sort-popover [data-sort-value="oldest"]').click();
-    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-value', 'oldest');
+    await mainWindow.locator('#sort-popover [data-sort-order="ascending"]').click();
+    await expect(cards.locator('.title')).toHaveText(['alpha.pdf', 'sample.pdf', 'zeta.pdf']);
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-by', 'name');
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-order', 'ascending');
+
+    await mainWindow.reload();
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-by', 'name');
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-order', 'ascending');
+    await expect(cards.locator('.title')).toHaveText(['alpha.pdf', 'sample.pdf', 'zeta.pdf']);
   } finally {
     await cleanup();
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('newest and oldest sorts group files by date while type sort stays grouped by type', async () => {
+test('created and modified date sorts group files by date while type sort stays grouped by type', async () => {
   const fixtureRoot = setupFixtureRoot(
     fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
   );
@@ -704,16 +721,23 @@ test('newest and oldest sorts group files by date while type sort stays grouped 
     const mainWindow = await electronApp.firstWindow();
     const cards = mainWindow.locator('#grid .card');
     await expect(cards).toHaveCount(2);
-    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-value', 'recent');
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-by', 'modified');
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-order', 'descending');
     await expect(mainWindow.locator('#grid .date-group .type-group-title')).toHaveText(['Today']);
 
     await mainWindow.locator('#sort-select').click();
-    await mainWindow.locator('#sort-popover [data-sort-value="oldest"]').click();
+    await mainWindow.locator('#sort-popover [data-sort-order="ascending"]').click();
     await expect(mainWindow.locator('#grid .date-group .type-group-title')).toHaveText(['Today']);
     await expect(mainWindow.locator('#grid .date-group .card')).toHaveCount(2);
 
     await mainWindow.locator('#sort-select').click();
-    await mainWindow.locator('#sort-popover [data-sort-value="type"]').click();
+    await mainWindow.locator('#sort-popover [data-sort-by="created"]').click();
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-by', 'created');
+    await expect(mainWindow.locator('#sort-select')).toHaveAttribute('data-sort-order', 'ascending');
+    await expect(mainWindow.locator('#grid .date-group .type-group-title')).toHaveText(['Today']);
+
+    await mainWindow.locator('#sort-select').click();
+    await mainWindow.locator('#sort-popover [data-sort-by="type"]').click();
     await expect(mainWindow.locator('#grid .date-group')).toHaveCount(0);
     await expect(mainWindow.locator('#grid .type-group')).toHaveCount(1);
     await expect(mainWindow.locator('#grid .type-group-title')).toHaveText(['PDF']);
@@ -867,12 +891,18 @@ test('duplicate review shows side-by-side previews, details, and file actions', 
 
   try {
     const mainWindow = await electronApp.firstWindow();
-    await mainWindow.locator('#filter-button').click();
-    await mainWindow.locator('#find-duplicates-button').click();
-
     const duplicateGroup = mainWindow.locator('.duplicate-group');
-    await expect(duplicateGroup).toHaveCount(1);
-    await expect(mainWindow.locator('#loading-state')).toBeHidden();
+    await test.step('Find image duplicates', async () => {
+      await mainWindow.locator('#filter-button').click();
+      await mainWindow.locator('#find-duplicates-button').click();
+      await expect(duplicateGroup).toHaveCount(1);
+      await expect(mainWindow.locator('#loading-state')).toBeHidden();
+      for (const selector of ['#sort-select', '#size-range', '#search-input', '#filter-button', '#refresh-button']) {
+        await expect(mainWindow.locator(selector)).toBeHidden();
+      }
+      await expect(mainWindow.locator('#view-menu-button')).toBeVisible();
+    });
+    await test.step('Verify duplicate layout and file actions', async () => {
     const groupWidth = await duplicateGroup.evaluate((element) => element.getBoundingClientRect().width);
     const gridWidth = await mainWindow.locator('#grid').evaluate((element) => element.getBoundingClientRect().width);
     expect(groupWidth).toBeGreaterThan(gridWidth * 0.9);
@@ -881,6 +911,7 @@ test('duplicate review shows side-by-side previews, details, and file actions', 
     await expect(duplicateGroup.locator('.duplicate-file')).toHaveCount(2);
     await expect(duplicateGroup.locator('.duplicate-file .preview img')).toHaveCount(2);
     const firstDuplicate = duplicateGroup.locator('.duplicate-file').first();
+    await mainWindow.locator('#duplicate-back-button').hover();
     await expect(firstDuplicate.locator('.duplicate-file-actions')).toHaveCSS('opacity', '0');
     await firstDuplicate.hover();
     await expect(firstDuplicate.locator('.duplicate-file-actions')).toHaveCSS('opacity', '1');
@@ -896,20 +927,55 @@ test('duplicate review shows side-by-side previews, details, and file actions', 
     const secondPreviewLeft = await duplicateGroup.locator('.duplicate-file .preview').nth(1)
       .evaluate((preview) => preview.getBoundingClientRect().left);
     expect(secondPreviewLeft).toBeGreaterThan(firstPreviewLeft);
-    await duplicateGroup.locator('.duplicate-file').first().click();
-    await expect(mainWindow.locator('#detail-name')).toHaveText('first.png');
-    await expect(mainWindow.locator('#detail-preview img')).toBeVisible();
-    await expect(mainWindow.locator('#detail-preview img')).toHaveJSProperty('naturalWidth', 48);
-    await expect(mainWindow.locator('#detail-dimensions')).toHaveText('48 × 32 pixels');
+    });
 
-    await mainWindow.locator('#filter-button').click();
-    await mainWindow.locator('input[name="file-type"][value="image"]').uncheck();
-    await mainWindow.locator('input[name="file-type"][value="custom"]').check();
-    await mainWindow.locator('#find-duplicates-button').click();
+    await test.step('Select a duplicate and verify its details', async () => {
+      await duplicateGroup.locator('.duplicate-file').first().click();
+      await expect(mainWindow.locator('#detail-name')).toHaveText('first.png');
+      await expect(mainWindow.locator('#detail-preview img')).toBeVisible();
+      await expect(mainWindow.locator('#detail-preview img')).toHaveJSProperty('naturalWidth', 48);
+      await expect(mainWindow.locator('#detail-dimensions')).toHaveText('48 × 32 pixels');
+    });
+
+    await test.step('Filter and find custom-file duplicates', async () => {
+      // Return to the normal file view before changing the filters.
+      await mainWindow.locator('#duplicate-back-button').click();
+      for (const selector of ['#sort-select', '#size-range', '#search-input', '#filter-button', '#refresh-button']) {
+        await expect(mainWindow.locator(selector)).toBeVisible();
+      }
+
+      await mainWindow.locator('#filter-button').click();
+      const filterPopover = mainWindow.locator('#filter-popover');
+      const imageFilter = filterPopover.locator('input[name="file-type"][value="image"]');
+      const customFilter = filterPopover.locator('input[name="file-type"][value="custom"]');
+
+      await expect(filterPopover).toBeVisible();
+
+      await test.step('Verify image filter is interactive', async () => {
+        await expect(imageFilter).toBeVisible();
+        await expect(imageFilter).toBeEnabled();
+        await expect(imageFilter).toBeChecked();
+      });
+
+      await test.step('Disable image filter', async () => {
+        await imageFilter.uncheck({ timeout: 5000 });
+        await expect(imageFilter).not.toBeChecked();
+      });
+
+      await test.step('Enable custom-file filter', async () => {
+        await expect(customFilter).toBeVisible();
+        await expect(customFilter).toBeEnabled();
+        await customFilter.check({ timeout: 5000 });
+        await expect(customFilter).toBeChecked();
+      });
+
+      await mainWindow.locator('#find-duplicates-button').click();
     await expect(mainWindow.locator('.duplicate-group')).toHaveCount(1);
-    await expect(mainWindow.locator('.duplicate-file-details strong'))
-      .toHaveText(['first.blend', 'second.blend']);
+      await expect(mainWindow.locator('.duplicate-file-details strong'))
+        .toHaveText(['first.blend', 'second.blend']);
+    });
 
+    await test.step('Return to the normal file list', async () => {
     await expect(mainWindow.locator('#duplicate-back-button svg')).toBeVisible();
     await expect(mainWindow.locator('#duplicate-back-button')).toContainText('Back to files');
     const changeFolderHeight = await mainWindow.locator('#browse-button').evaluate((button) =>
@@ -920,6 +986,7 @@ test('duplicate review shows side-by-side previews, details, and file actions', 
     await mainWindow.locator('#duplicate-back-button').click();
     await expect(mainWindow.locator('#grid .card')).toHaveCount(3);
     await expect(mainWindow.locator('#detail-preview')).toBeHidden();
+    });
   } finally {
     await cleanup();
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
