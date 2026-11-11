@@ -179,6 +179,82 @@ test('main window loads and settings window opens', async () => {
   }
 });
 
+test('dark theme can be selected and persists across windows', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const settingsWindowPromise = electronApp.waitForEvent('window');
+    await mainWindow.locator('#view-menu-button').click();
+    const settingsWindow = await settingsWindowPromise;
+    const darkThemeOption = settingsWindow.locator('input[name="theme"][value="dark"]');
+
+    await darkThemeOption.check();
+    await expect(settingsWindow.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(settingsWindow.locator('html')).toHaveCSS('color-scheme', 'dark');
+    await expect(settingsWindow.locator('.theme-swatch.dark')).toBeVisible();
+    await Promise.all([
+      settingsWindow.waitForEvent('close'),
+      settingsWindow.locator('#save-btn').click()
+    ]);
+
+    await expect(mainWindow.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(mainWindow.locator('html')).toHaveCSS('color-scheme', 'dark');
+    await expect(mainWindow.locator('#grid .card').first()).toBeVisible();
+
+    const reopenedSettingsPromise = electronApp.waitForEvent('window');
+    await mainWindow.locator('#view-menu-button').click();
+    const reopenedSettings = await reopenedSettingsPromise;
+    await expect(reopenedSettings.locator('input[name="theme"][value="dark"]')).toBeChecked();
+    await reopenedSettings.close();
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('terminal theme applies terminal styling and persists across windows', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const settingsWindowPromise = electronApp.waitForEvent('window');
+    await mainWindow.locator('#view-menu-button').click();
+    const settingsWindow = await settingsWindowPromise;
+    const terminalThemeOption = settingsWindow.locator('input[name="theme"][value="terminal"]');
+
+    await terminalThemeOption.check();
+    await expect(settingsWindow.locator('html')).toHaveAttribute('data-theme', 'terminal');
+    await expect(settingsWindow.locator('html')).toHaveCSS('color-scheme', 'dark');
+    await expect(settingsWindow.locator('.theme-swatch.terminal')).toBeVisible();
+    await Promise.all([
+      settingsWindow.waitForEvent('close'),
+      settingsWindow.locator('#save-btn').click()
+    ]);
+
+    await expect(mainWindow.locator('html')).toHaveAttribute('data-theme', 'terminal');
+    await expect(mainWindow.locator('html')).toHaveCSS('color-scheme', 'dark');
+    await expect(mainWindow.locator('#grid .card').first()).toBeVisible();
+    expect(await mainWindow.locator('#grid .card .title').first().evaluate((title) =>
+      getComputedStyle(title).fontFamily)).toContain('Cascadia Code');
+
+    const reopenedSettingsPromise = electronApp.waitForEvent('window');
+    await mainWindow.locator('#view-menu-button').click();
+    const reopenedSettings = await reopenedSettingsPromise;
+    await expect(reopenedSettings.locator('input[name="theme"][value="terminal"]')).toBeChecked();
+    await reopenedSettings.close();
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('sort and filter dropdown popovers stay anchored without shifting the toolbar', async () => {
   const fixtureRoot = setupFixtureRoot(
     fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))

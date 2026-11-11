@@ -34,6 +34,9 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Fetch all remote tags
+        run: git fetch --tags --force
+
       - name: Run semantic-release
         id: semantic
         uses: cycjimmy/semantic-release-action@v8

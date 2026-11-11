@@ -17,6 +17,11 @@ contextBridge.exposeInMainWorld('printaViewApi', {
   browseFolders: () => ipcRenderer.invoke('folder:browse'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (payload) => ipcRenderer.invoke('settings:save', payload),
+  onSettingsUpdated: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('settings:updated', listener);
+    return () => ipcRenderer.removeListener('settings:updated', listener);
+  },
   getHiddenItems: () => ipcRenderer.invoke('hidden:getItems'),
   clearAllHidden: () => ipcRenderer.invoke('hidden:clearAll'),
   getVersion: () => ipcRenderer.invoke('get-app-version'),

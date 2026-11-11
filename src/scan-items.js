@@ -1,5 +1,7 @@
 const path = require('path');
 
+const MACOSX_HIDDEN_FOLDER = '__MACOSX';
+
 function normalizePathForKey(inputPath) {
   return path.resolve(inputPath).toLowerCase();
 }
@@ -11,6 +13,12 @@ function isPathHidden(targetPath, hiddenSet) {
   for (let i = segments.length; i > 0; i -= 1) {
     const candidate = segments.slice(0, i).join(path.sep);
     if (hiddenSet.has(candidate)) {
+      return true;
+    }
+  }
+
+  for (const segment of segments) {
+    if (segment === MACOSX_HIDDEN_FOLDER.toLowerCase()) {
       return true;
     }
   }

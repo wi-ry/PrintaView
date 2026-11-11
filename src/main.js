@@ -246,7 +246,7 @@ function loadSettings() {
     const parsed = JSON.parse(raw);
     const allowedSort = new Set(['recent', 'oldest', 'name', 'type']);
     const allowedFavoritesFilter = new Set(['all', 'favorites']);
-    const allowedThemes = new Set(['default', 'pastel-pink', 'baby-blue']);
+    const allowedThemes = new Set(['default', 'pastel-pink', 'baby-blue', 'dark', 'terminal']);
     return {
       showDetailsPane: parsed.showDetailsPane !== false,
       showHidden: parsed.showHidden === true,
@@ -680,8 +680,11 @@ ipcMain.handle('settings:get', () => {
   return loadSettings();
 });
 
-ipcMain.handle('settings:save', (_event, payload = {}) => {
+ipcMain.handle('settings:save', (event, payload = {}) => {
   saveSettings(payload);
+  if (mainWindow && !mainWindow.isDestroyed() && event.sender !== mainWindow.webContents) {
+    mainWindow.webContents.send('settings:updated');
+  }
   return { ok: true };
 });
 
