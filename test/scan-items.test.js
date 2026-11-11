@@ -56,3 +56,23 @@ test('createScannedItems excludes items hidden by a parent when hidden items are
   assert.deepEqual(items.map(({ path: itemPath }) => itemPath), [visibleFile]);
   assert.equal(items[0].previewType, 'generic');
 });
+
+test('createScannedItems treats __MACOSX folder as hidden', () => {
+  const macosxFolder = path.resolve('scan-fixture', '__MACOSX');
+  const macosxFile = path.join(macosxFolder, 'Icon\r');
+  const visibleFile = path.resolve('scan-fixture', 'visible.txt');
+
+  const items = createScannedItems([
+    { absolutePath: macosxFolder, parentPath: path.dirname(macosxFolder), stats: stats({ directory: true }) },
+    { absolutePath: macosxFile, parentPath: macosxFolder, stats: stats({ size: 8 }) },
+    { absolutePath: visibleFile, parentPath: path.dirname(visibleFile), stats: stats() }
+  ], new Set(), new Set(), true);
+
+  assert.deepEqual(items.map(({ name, hiddenByApp }) => ({ name, hiddenByApp })), [
+    { name: '__MACOSX', hiddenByApp: true },
+    { name: 'Icon\r', hiddenByApp: true },
+    { name: 'visible.txt', hiddenByApp: false }
+  ]);
+  assert.equal(items.filter(i => !i.hiddenByApp).length, 1);
+  assert.equal(items[2].name, 'visible.txt');
+});
