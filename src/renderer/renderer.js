@@ -1443,6 +1443,11 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+window.printaViewApi.onFilesChanged(async () => {
+  if (isFindingDuplicates || duplicateGroups !== null) return;
+  await refreshFromSettings();
+});
+
 window.printaViewApi.onSettingsUpdated(async () => {
   if (isFindingDuplicates || duplicateGroups !== null) return;
   await refreshFromSettings();
