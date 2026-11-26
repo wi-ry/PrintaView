@@ -357,22 +357,36 @@ function startDirectoryWatcher() {
   }
 
   try {
-    directoryWatcher = fs.watch(rootFolder, { recursive: true }, () => {
+    const watcher = fs.watch(rootFolder, { recursive: true }, () => {
+      // A filesystem notification can already be queued when the watcher is closed.
+      // Ignore callbacks from a watcher that is no longer active.
+      if (directoryWatcher !== watcher || loadSettings().autoScanFiles === false) {
+        return;
+      }
+
       if (directoryWatchDebounceTimer) {
         clearTimeout(directoryWatchDebounceTimer);
       }
 
       directoryWatchDebounceTimer = setTimeout(() => {
         directoryWatchDebounceTimer = null;
-        if (mainWindow && !mainWindow.isDestroyed()) {
+        if (
+          directoryWatcher === watcher
+          && loadSettings().autoScanFiles !== false
+          && mainWindow
+          && !mainWindow.isDestroyed()
+        ) {
           mainWindow.webContents.send('items:changed');
         }
       }, DIRECTORY_WATCH_DEBOUNCE_MS);
     });
 
-    directoryWatcher.on('error', (error) => {
+    directoryWatcher = watcher;
+    watcher.on('error', (error) => {
       console.error('Directory watcher stopped:', error);
-      stopDirectoryWatcher();
+      if (directoryWatcher === watcher) {
+        stopDirectoryWatcher();
+      }
     });
   } catch (error) {
     console.error('Could not watch the selected folder for changes:', error);
