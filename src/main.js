@@ -755,11 +755,24 @@ ipcMain.handle('settings:get', () => {
 });
 
 ipcMain.handle('settings:save', (event, payload = {}) => {
+  const previousSettings = loadSettings();
   saveSettings(payload);
   if (Object.prototype.hasOwnProperty.call(payload, 'autoScanFiles')) {
     startDirectoryWatcher();
   }
-  if (mainWindow && !mainWindow.isDestroyed() && event.sender !== mainWindow.webContents) {
+
+  const previousDisplaySettings = { ...previousSettings };
+  const nextDisplaySettings = { ...loadSettings() };
+  delete previousDisplaySettings.autoScanFiles;
+  delete nextDisplaySettings.autoScanFiles;
+  const displaySettingsChanged = JSON.stringify(previousDisplaySettings) !== JSON.stringify(nextDisplaySettings);
+
+  if (
+    displaySettingsChanged
+    && mainWindow
+    && !mainWindow.isDestroyed()
+    && event.sender !== mainWindow.webContents
+  ) {
     mainWindow.webContents.send('settings:updated');
   }
   return { ok: true };
