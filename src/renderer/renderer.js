@@ -1213,6 +1213,10 @@ document.getElementById('find-duplicates-button').addEventListener('click', asyn
     duplicateToolbar.hidden = true;
     toolbarElement.classList.remove('duplicates-active');
     updateGridStatus(`Could not find duplicates: ${error.message}`);
+    if (hasPendingFolderChanges) {
+      hasPendingFolderChanges = false;
+      await refreshFromSettings();
+    }
   }
 });
 
