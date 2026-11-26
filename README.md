@@ -47,6 +47,7 @@ bun run screenshots -- "path/to/PrintaView Demo Images"
 - Optional details pane with metadata, adjustable preview size, and configurable left/right placement.
 - Keyboard and mouse-friendly actions for opening files, revealing them in Explorer, and moving them to the Recycle Bin.
 - Settings for theme selection (`Default`, `Pastel Pink`, `Baby Blue`), default file type filters, custom extensions, and per-user app preferences.
+- Optional automatic folder monitoring that refreshes the file list when files or folders are added, changed, or removed.
 
 ## Development
 

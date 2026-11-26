@@ -1,5 +1,6 @@
 const showDetailsPaneCheckbox = document.getElementById('show-details-pane');
 const showHiddenToggle = document.getElementById('show-hidden');
+const autoScanFilesToggle = document.getElementById('auto-scan-files');
 const themeInputs = document.querySelectorAll('input[name="theme"]');
 const defaultFileTypeInputs = document.querySelectorAll('#default-file-types input');
 const customFileTypesToggle = document.querySelector('#default-file-types input[value="custom"]');
@@ -23,7 +24,8 @@ let pendingSettings = {
   panePosition: 'right',
   theme: 'default',
   defaultFileTypes: ['image', 'pdf', 'tiff'],
-  customExtensions: []
+  customExtensions: [],
+  autoScanFiles: true
 };
 
 function activateSettingsTab(tab, moveFocus = false) {
@@ -96,6 +98,7 @@ async function syncSettings() {
 
   showDetailsPaneCheckbox.checked = settings.showDetailsPane;
   showHiddenToggle.checked = settings.showHidden;
+  autoScanFilesToggle.checked = settings.autoScanFiles !== false;
   const defaultFileTypes = Array.isArray(settings.defaultFileTypes)
     ? settings.defaultFileTypes
     : ['image', 'pdf', 'tiff'];
@@ -160,6 +163,10 @@ showDetailsPaneCheckbox.addEventListener('change', () => {
 
 showHiddenToggle.addEventListener('change', () => {
   pendingSettings.showHidden = showHiddenToggle.checked;
+});
+
+autoScanFilesToggle.addEventListener('change', () => {
+  pendingSettings.autoScanFiles = autoScanFilesToggle.checked;
 });
 
 themeInputs.forEach((input) => {

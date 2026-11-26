@@ -14,6 +14,10 @@ const { applyWindowSecurity } = require('./window-security');
 let mainWindow;
 let settingsWindow;
 let hasMigratedLegacyStorage = false;
+let directoryWatcher = null;
+let directoryWatchDebounceTimer = null;
+
+const DIRECTORY_WATCH_DEBOUNCE_MS = 400;
 
 const APP_DATA_FOLDER = 'PrintaView';
 const SETTINGS_FILE_NAME = 'printaview-settings.json';
@@ -240,7 +244,8 @@ function loadSettings() {
       filters: null,
       defaultFileTypes: ['image', 'pdf', 'tiff'],
       customExtensions: [],
-      theme: 'default'
+      theme: 'default',
+      autoScanFiles: true
     };
   }
   try {
@@ -276,7 +281,8 @@ function loadSettings() {
         ? itemUtils.normalizeFilters({ types: parsed.defaultFileTypes }).types
         : ['image', 'pdf', 'tiff'],
       customExtensions: itemUtils.normalizeExtensions(parsed.customExtensions),
-      theme: allowedThemes.has(parsed.theme) ? parsed.theme : 'default'
+      theme: allowedThemes.has(parsed.theme) ? parsed.theme : 'default',
+      autoScanFiles: parsed.autoScanFiles !== false
     };
   } catch (error) {
     return {
@@ -290,7 +296,8 @@ function loadSettings() {
       filters: null,
       defaultFileTypes: ['image', 'pdf', 'tiff'],
       customExtensions: [],
-      theme: 'default'
+      theme: 'default',
+      autoScanFiles: true
     };
   }
 }
@@ -323,6 +330,67 @@ function getRootFolder() {
     return custom;
   }
   return path.join(os.homedir(), 'Downloads');
+}
+
+function stopDirectoryWatcher() {
+  if (directoryWatchDebounceTimer) {
+    clearTimeout(directoryWatchDebounceTimer);
+    directoryWatchDebounceTimer = null;
+  }
+
+  if (directoryWatcher) {
+    directoryWatcher.close();
+    directoryWatcher = null;
+  }
+}
+
+function startDirectoryWatcher() {
+  stopDirectoryWatcher();
+
+  if (loadSettings().autoScanFiles === false) {
+    return;
+  }
+
+  const rootFolder = getRootFolder();
+  if (!fs.existsSync(rootFolder)) {
+    return;
+  }
+
+  try {
+    const watcher = fs.watch(rootFolder, { recursive: true }, () => {
+      // A filesystem notification can already be queued when the watcher is closed.
+      // Ignore callbacks from a watcher that is no longer active.
+      if (directoryWatcher !== watcher || loadSettings().autoScanFiles === false) {
+        return;
+      }
+
+      if (directoryWatchDebounceTimer) {
+        clearTimeout(directoryWatchDebounceTimer);
+      }
+
+      directoryWatchDebounceTimer = setTimeout(() => {
+        directoryWatchDebounceTimer = null;
+        if (
+          directoryWatcher === watcher
+          && loadSettings().autoScanFiles !== false
+          && mainWindow
+          && !mainWindow.isDestroyed()
+        ) {
+          mainWindow.webContents.send('items:changed');
+        }
+      }, DIRECTORY_WATCH_DEBOUNCE_MS);
+    });
+
+    directoryWatcher = watcher;
+    watcher.on('error', (error) => {
+      console.error('Directory watcher stopped:', error);
+      if (directoryWatcher === watcher) {
+        stopDirectoryWatcher();
+      }
+    });
+  } catch (error) {
+    console.error('Could not watch the selected folder for changes:', error);
+  }
 }
 
 function loadHiddenPaths() {
@@ -485,6 +553,7 @@ ipcMain.handle('folder:browse', async () => {
     }
     const selectedPath = result.filePaths[0];
     saveCustomRootFolder(selectedPath);
+    startDirectoryWatcher();
     return { ok: true, path: selectedPath };
   } catch (error) {
     return { ok: false, error: error.message };
@@ -686,8 +755,24 @@ ipcMain.handle('settings:get', () => {
 });
 
 ipcMain.handle('settings:save', (event, payload = {}) => {
+  const previousSettings = loadSettings();
   saveSettings(payload);
-  if (mainWindow && !mainWindow.isDestroyed() && event.sender !== mainWindow.webContents) {
+  if (Object.prototype.hasOwnProperty.call(payload, 'autoScanFiles')) {
+    startDirectoryWatcher();
+  }
+
+  const previousDisplaySettings = { ...previousSettings };
+  const nextDisplaySettings = { ...loadSettings() };
+  delete previousDisplaySettings.autoScanFiles;
+  delete nextDisplaySettings.autoScanFiles;
+  const displaySettingsChanged = JSON.stringify(previousDisplaySettings) !== JSON.stringify(nextDisplaySettings);
+
+  if (
+    displaySettingsChanged
+    && mainWindow
+    && !mainWindow.isDestroyed()
+    && event.sender !== mainWindow.webContents
+  ) {
     mainWindow.webContents.send('settings:updated');
   }
   return { ok: true };
@@ -792,12 +877,17 @@ ipcMain.on('settings:open', () => {
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   createMainWindow();
+  startDirectoryWatcher();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow();
     }
   });
+});
+
+app.on('before-quit', () => {
+  stopDirectoryWatcher();
 });
 
 app.on('window-all-closed', () => {

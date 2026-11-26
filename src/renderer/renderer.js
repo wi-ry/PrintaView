@@ -58,6 +58,7 @@ let customExtensions = [];
 let duplicateGroups = null;
 let duplicateSkippedFiles = [];
 let isFindingDuplicates = false;
+let hasPendingFileChanges = false;
 const collapsedGroups = new Set();
 const MIN_DETAILS_PANE_WIDTH = 240;
 const MAX_DETAILS_PANE_WIDTH = 600;
@@ -1215,10 +1216,17 @@ document.getElementById('find-duplicates-button').addEventListener('click', asyn
   }
 });
 
-document.getElementById('duplicate-back-button').addEventListener('click', () => {
+document.getElementById('duplicate-back-button').addEventListener('click', async () => {
   duplicateGroups = null;
   toolbarElement.classList.remove('duplicates-active');
   gridElement.classList.remove('grouped-by-duplicates');
+
+  if (hasPendingFileChanges) {
+    hasPendingFileChanges = false;
+    await refreshFromSettings();
+    return;
+  }
+
   renderItems();
   const visibleItems = getVisibleItems();
   const selectedItem = visibleItems.find((item) => item.id === selectedItemId);
@@ -1441,6 +1449,14 @@ document.addEventListener('keydown', (event) => {
       openItemByPath(item.path, item.name);
     }
   }
+});
+
+window.printaViewApi.onFilesChanged(async () => {
+  if (isFindingDuplicates || duplicateGroups !== null) {
+    hasPendingFileChanges = true;
+    return;
+  }
+  await refreshFromSettings();
 });
 
 window.printaViewApi.onSettingsUpdated(async () => {
