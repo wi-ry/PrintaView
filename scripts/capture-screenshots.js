@@ -4,6 +4,7 @@ const path = require('path');
 const { _electron: electron } = require('playwright');
 
 const imagesDirectory = path.join(__dirname, '..', 'images');
+const mainWindowSize = { width: 1440, height: 900 };
 const screenshotFiles = [
   ['app-without-details.png', 'app1.png'],
   ['app-with-details.png', 'app2.png'],
@@ -18,6 +19,19 @@ function getDemoFolder() {
   const configuredFolder = process.argv[2] || process.env.PRINTAVIEW_SCREENSHOT_FOLDER;
   if (configuredFolder) return path.resolve(configuredFolder);
   return path.join(imagesDirectory, 'staging');
+}
+
+async function setWindowSize(app, window, size) {
+  await app.evaluate(({ BrowserWindow }) => {
+    const targetWindow = BrowserWindow.getAllWindows().find((candidate) =>
+      candidate.webContents.getURL() === windowUrl
+    );
+    if (!targetWindow) throw new Error(`Could not find window: ${windowUrl}`);
+    targetWindow.setSize(size.width, size.height);
+  }, { windowUrl: await window.url(), size });
+  await window.waitForFunction(({ width, height }) =>
+    window.innerWidth === width && window.innerHeight === height,
+  size);
 }
 
 async function waitForItems(window) {
@@ -148,6 +162,7 @@ async function captureScreenshots() {
 
     const mainWindow = await app.firstWindow();
     const cards = mainWindow.locator('#grid .card');
+    await setWindowSize(app, mainWindow, mainWindowSize);
     await waitForItems(mainWindow);
     const displayedFolder = await mainWindow.locator('#downloads-path').textContent();
     if (path.resolve(displayedFolder) !== path.resolve(demoFolder)) {
