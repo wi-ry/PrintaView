@@ -62,14 +62,13 @@ jobs:
         with:
           ref: ${{ needs.release.outputs.tag }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.4.4
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Validate release version
         shell: pwsh
@@ -82,7 +81,7 @@ jobs:
           }
 
       - name: Build Windows portable EXE
-        run: npm run build:win
+        run: bun run build:win
 
       - name: Verify portable EXE
         id: artifact
@@ -118,14 +117,13 @@ jobs:
         with:
           ref: ${{ needs.release.outputs.tag }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.4.4
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Validate MSIX configuration
         shell: pwsh
@@ -151,7 +149,7 @@ jobs:
           }
 
       - name: Build unpacked Windows app
-        run: npx electron-builder --win dir
+        run: bunx electron-builder --win dir
 
       - name: Package unsigned MSIX
         shell: pwsh
@@ -187,7 +185,7 @@ jobs:
     needs: [release, build-msix]
     if: ${{ needs.release.outputs.published == 'true' }}
     runs-on: windows-latest
-    environment: store # optional: add required reviewers here for a manual gate
+    environment: store
     concurrency:
       group: store-submission
       cancel-in-progress: false

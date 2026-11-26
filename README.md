@@ -24,15 +24,14 @@ PrintaView is a standalone Windows desktop app for browsing and previewing files
 Refresh these screenshots from the bundled sample images in `images/staging/` with:
 
 ```sh
-npm run screenshots
+bun run screenshots
 ```
 
 To use a different demo folder, pass its path:
 
 ```sh
-npm run screenshots -- "path/to/PrintaView Demo Images"
+bun run screenshots -- "path/to/PrintaView Demo Images"
 ```
-
 
 ## Features
 
@@ -51,30 +50,32 @@ npm run screenshots -- "path/to/PrintaView Demo Images"
 
 ## Development
 
+PrintaView uses [Bun](https://bun.sh/) for dependency management and package scripts. Install Bun first, then:
+
 1. Install dependencies:
 
 ```powershell
-npm install
+bun install
 ```
 
 2. Run the app:
 
 ```powershell
-npm start
+bun run start
 ```
 
 3. Run tests (Electron UI tests are headless by default):
 
 ```powershell
-npm run test:all
+bun run test:all
 ```
 
-To show the app windows while debugging UI tests, set `PRINTAVIEW_TEST_HEADED=1` before running `npm run test:e2e` or `npm run test:packaged`.
+To show the app windows while debugging UI tests, set `PRINTAVIEW_TEST_HEADED=1` before running `bun run test:e2e` or `bun run test:packaged`.
 
 ## Build Standalone Portable EXE (Windows)
 
 ```powershell
-npm run build:win
+bun run build:win
 ```
 
 Build output is written to the `release` folder as a portable executable that can be run from anywhere.
@@ -98,14 +99,14 @@ Before the first release:
    - `SECRET_VALUE` (the service principal client secret)
 4. Ensure the service principal has permission to manage the PrintaView product in Partner Center.
 
-The workflow commits the calculated version to `package.json` and `package-lock.json`. The MSIX version is derived from that release version and converted to the four-part format required by Windows.
+The workflow commits the calculated version to `package.json` and `bun.lock`. The MSIX version is derived from that release version and converted to the four-part format required by Windows.
 
 To build the unsigned package locally after installing dependencies:
 
 ```powershell
-npm run build:win
-npx electron-builder --win dir
-.github\scripts\package-msix.ps1 -Version (node -p "require('./package.json').version")
+bun run build:win
+bunx electron-builder --win dir
+.github\\scripts\\package-msix.ps1 -Version (node -p "require('./package.json').version")
 ```
 
 Set the three `MSIX_*` environment variables to the Partner Center identity values when producing a package intended for Store submission.
@@ -119,4 +120,4 @@ Releases are driven by [Conventional Commits](https://www.conventionalcommits.or
 - Add `!` after the type or include `BREAKING CHANGE:` in the commit body to create a major release.
 - Other commit types that do not indicate a feature, fix, or breaking change do not trigger a release.
 
-Pull request titles and commit messages are checked for Conventional Commit formatting. Use a release-triggering title such as `fix: correct PDF preview` or `feat: add folder filtering` when the change should ship. When CI succeeds on `main`, semantic-release updates `package.json` and `package-lock.json`, creates the version tag and GitHub release, and triggers the Windows packaging and Store submission job. The GitHub release includes the portable EXE; the unsigned MSIX is submitted directly to Microsoft Store only. No manual version bump or tag is needed. See [.github/workflows/conventional-commits.yml](.github/workflows/conventional-commits.yml), [.github/workflows/release.yml](.github/workflows/release.yml), and [.releaserc.json](.releaserc.json).
+Pull request titles and commit messages are checked for Conventional Commit formatting. Use a release-triggering title such as `fix: correct PDF preview` or `feat: add folder filtering` when the change should ship. When CI succeeds on `main`, semantic-release updates `package.json` and `bun.lock`, creates the version tag and GitHub release, and triggers the Windows packaging and Store submission job. The GitHub release includes the portable EXE; the unsigned MSIX is submitted directly to Microsoft Store only. No manual version bump or tag is needed. See [.github/workflows/conventional-commits.yml](.github/workflows/conventional-commits.yml), [.github/workflows/release.yml](.github/workflows/release.yml), and [.releaserc.json](.releaserc.json).

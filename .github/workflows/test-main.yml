@@ -25,17 +25,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.4.4
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Run unit tests
-        run: npm test
+        run: bun run test
 
   playwright-e2e:
     name: Playwright E2E
@@ -46,17 +45,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.4.4
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Run Playwright E2E tests
-        run: npm run test:e2e
+        run: bun run test:e2e
 
       - name: Upload Playwright failure artifacts
         if: always()
@@ -76,34 +74,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.4.4
 
       - name: Cache Electron builder downloads
         uses: actions/cache@v4
         with:
           path: |
-            ~\AppData\Local\electron-builder\Cache
-            ~\AppData\Local\electron\Cache
-          key: ${{ runner.os }}-electron-builder-${{ hashFiles('package-lock.json') }}
+            ~\\AppData\\Local\\electron-builder\\Cache
+            ~\\AppData\\Local\\electron\\Cache
+          key: ${{ runner.os }}-electron-builder-${{ hashFiles('bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-electron-builder-
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build portable Windows app
-        run: npm run build:win:ci
+        run: bun run build:win:ci
 
       - name: Smoke test packaged app
         shell: pwsh
         run: |
-          $executable = Resolve-Path 'release\win-unpacked\PrintaView.exe' -ErrorAction Stop
+          $executable = Resolve-Path 'release\\win-unpacked\\PrintaView.exe' -ErrorAction Stop
           $env:PRINTAVIEW_EXECUTABLE = $executable.Path
-          npm run test:packaged
+          bun run test:packaged
 
       - name: Upload portable Windows build
         if: always()
