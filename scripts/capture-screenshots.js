@@ -11,7 +11,7 @@ const screenshotFiles = [
   ['right-click-menu.png', 'right-click.png'],
   ['settings-appearance.png', 'settings1.png'],
   ['settings-file-types.png', 'settings2.png'],
-  ['settings-hidden-files.png', 'settings3.png'],
+  ['settings-file-management.png', 'settings3.png'],
   ['settings-about.png', 'settings4.png']
 ];
 
@@ -179,7 +179,7 @@ async function captureScreenshots() {
 
     for (const [tabName, panelId, screenshotName] of [
       ['File Types', 'file-types-panel', 'settings-file-types.png'],
-      ['Hidden Files', 'hidden-files-panel', 'settings-hidden-files.png'],
+      ['File Management', 'file-management-panel', 'settings-file-management.png'],
       ['About', 'about-panel', 'settings-about.png']
     ]) {
       await settingsWindow.getByRole('tab', { name: tabName }).click();
