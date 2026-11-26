@@ -893,8 +893,14 @@ test('duplicate review shows side-by-side previews, details, and file actions', 
     const mainWindow = await electronApp.firstWindow();
     const duplicateGroup = mainWindow.locator('.duplicate-group');
     await test.step('Find image duplicates', async () => {
+      const filterPopover = mainWindow.locator('#filter-popover');
+      const findDuplicatesButton = mainWindow.locator('#find-duplicates-button');
+
       await mainWindow.locator('#filter-button').click();
-      await mainWindow.locator('#find-duplicates-button').click();
+      await expect(filterPopover).toBeVisible();
+      await expect(findDuplicatesButton).toBeVisible();
+      await expect(findDuplicatesButton).toBeEnabled();
+      await findDuplicatesButton.click({ timeout: 5000 });
       await expect(duplicateGroup).toHaveCount(1);
       await expect(mainWindow.locator('#loading-state')).toBeHidden();
       for (const selector of ['#sort-select', '#size-range', '#search-input', '#filter-button', '#refresh-button']) {
