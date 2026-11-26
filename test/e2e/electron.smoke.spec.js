@@ -168,14 +168,14 @@ test('main window loads and settings window opens', async () => {
     await expect(settingsWindow.locator('#file-types-panel')).toBeVisible();
     await expect(settingsWindow.locator('#default-file-types input[value="image"]')).toBeChecked();
     await expect(settingsWindow.locator('#custom-extensions')).toBeVisible();
-    await expect(settingsWindow.locator('#hidden-files-panel')).toBeHidden();
-    await settingsWindow.getByRole('tab', { name: 'Hidden Files' }).click();
-    await expect(settingsWindow.locator('#hidden-files-panel')).toBeVisible();
+    await settingsWindow.getByRole('tab', { name: 'File Management' }).click();
+    await expect(settingsWindow.locator('#file-management-panel')).toBeVisible();
     await expect(settingsWindow.locator('#display-panel')).toBeHidden();
     await expect(settingsWindow.locator('#show-hidden')).toBeVisible();
+    await expect(settingsWindow.locator('#auto-scan-files')).toBeVisible();
     await settingsWindow.getByRole('tab', { name: 'Appearance' }).click();
     await expect(settingsWindow.locator('#display-panel')).toBeVisible();
-    await expect(settingsWindow.locator('#hidden-files-panel')).toBeHidden();
+    await expect(settingsWindow.locator('#file-management-panel')).toBeHidden();
     await settingsWindow.close();
   } finally {
     await cleanup();
@@ -1012,7 +1012,9 @@ test('automatically refreshes for folder changes and respects the scanning setti
     const settingsWindowPromise = electronApp.waitForEvent('window');
     await mainWindow.locator('#view-menu-button').click();
     const settingsWindow = await settingsWindowPromise;
+    await settingsWindow.getByRole('tab', { name: 'File Management' }).click();
     const autoScanToggle = settingsWindow.locator('#auto-scan-files');
+    await expect(autoScanToggle).toBeVisible();
     await expect(autoScanToggle).toBeChecked();
     await autoScanToggle.uncheck();
     await Promise.all([
