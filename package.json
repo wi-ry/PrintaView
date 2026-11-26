@@ -8,7 +8,7 @@
   "packageManager": "bun@1.4.4",
   "scripts": {
     "start": "electron .",
-    "screenshots": "node scripts/capture-screenshots.js",
+    "screenshots": "bun scripts/capture-screenshots.js",
     "test": "bun run test:unit",
     "test:unit": "node --test test/*.test.js",
     "test:e2e": "playwright test",
