@@ -17,6 +17,11 @@ contextBridge.exposeInMainWorld('printaViewApi', {
   browseFolders: () => ipcRenderer.invoke('folder:browse'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (payload) => ipcRenderer.invoke('settings:save', payload),
+  onFilesChanged: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('items:changed', listener);
+    return () => ipcRenderer.removeListener('items:changed', listener);
+  },
   onSettingsUpdated: (callback) => {
     const listener = () => callback();
     ipcRenderer.on('settings:updated', listener);
