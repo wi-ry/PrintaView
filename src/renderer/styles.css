@@ -127,7 +127,7 @@ html,
 body {
   margin: 0;
   height: 100%;
-  font-family: "Segoe UI Variable", "Trebuchet MS", "Gill Sans", sans-serif;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
   background:
     radial-gradient(circle at 20% 10%, var(--bg-grad-1) 0%, transparent 45%),
@@ -255,6 +255,13 @@ button,
 select,
 input[type="range"] {
   accent-color: var(--accent);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 button,
