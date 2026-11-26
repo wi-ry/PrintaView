@@ -58,6 +58,7 @@ let customExtensions = [];
 let duplicateGroups = null;
 let duplicateSkippedFiles = [];
 let isFindingDuplicates = false;
+let hasPendingFolderChanges = false;
 const collapsedGroups = new Set();
 const MIN_DETAILS_PANE_WIDTH = 240;
 const MAX_DETAILS_PANE_WIDTH = 600;
@@ -1215,10 +1216,15 @@ document.getElementById('find-duplicates-button').addEventListener('click', asyn
   }
 });
 
-document.getElementById('duplicate-back-button').addEventListener('click', () => {
+document.getElementById('duplicate-back-button').addEventListener('click', async () => {
   duplicateGroups = null;
   toolbarElement.classList.remove('duplicates-active');
   gridElement.classList.remove('grouped-by-duplicates');
+  if (hasPendingFolderChanges) {
+    hasPendingFolderChanges = false;
+    await refreshFromSettings();
+    return;
+  }
   renderItems();
   const visibleItems = getVisibleItems();
   const selectedItem = visibleItems.find((item) => item.id === selectedItemId);
@@ -1444,7 +1450,10 @@ document.addEventListener('keydown', (event) => {
 });
 
 window.printaViewApi.onItemsChanged(async () => {
-  if (isFindingDuplicates || duplicateGroups !== null) return;
+  if (isFindingDuplicates || duplicateGroups !== null) {
+    hasPendingFolderChanges = true;
+    return;
+  }
   await refreshFromSettings();
 });
 
