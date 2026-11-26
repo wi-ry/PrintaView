@@ -992,3 +992,48 @@ test('duplicate review shows side-by-side previews, details, and file actions', 
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+
+test('automatically refreshes for folder changes and respects the scanning setting', async () => {
+  const fixtureRoot = setupFixtureRoot(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'printaview-smoke-files-'))
+  );
+  const { electronApp, cleanup } = await launchIsolatedApp(fixtureRoot);
+
+  try {
+    const mainWindow = await electronApp.firstWindow();
+    const cards = mainWindow.locator('#grid .card');
+    await expect(cards).toHaveCount(1);
+
+    fs.mkdirSync(path.join(fixtureRoot, 'nested'));
+    fs.writeFileSync(path.join(fixtureRoot, 'nested', 'added.pdf'), '%PDF-1.4\\n% added fixture\\n', 'utf8');
+    await expect(cards).toHaveCount(2);
+
+    const settingsWindowPromise = electronApp.waitForEvent('window');
+    await mainWindow.locator('#view-menu-button').click();
+    const settingsWindow = await settingsWindowPromise;
+    const autoScanToggle = settingsWindow.locator('#auto-scan-files');
+    await expect(autoScanToggle).toBeChecked();
+    await autoScanToggle.uncheck();
+    await Promise.all([
+      settingsWindow.waitForEvent('close'),
+      settingsWindow.locator('#save-btn').click()
+    ]);
+
+    fs.writeFileSync(path.join(fixtureRoot, 'manual-refresh.pdf'), '%PDF-1.4\\n% manual fixture\\n', 'utf8');
+    await mainWindow.waitForTimeout(700);
+    await expect(cards).toHaveCount(2);
+
+    await mainWindow.locator('#refresh-button').click();
+    await expect(cards).toHaveCount(3);
+
+    const reopenedSettingsPromise = electronApp.waitForEvent('window');
+    await mainWindow.locator('#view-menu-button').click();
+    const reopenedSettings = await reopenedSettingsPromise;
+    await expect(reopenedSettings.locator('#auto-scan-files')).not.toBeChecked();
+    await reopenedSettings.close();
+  } finally {
+    await cleanup();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
