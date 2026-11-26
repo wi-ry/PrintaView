@@ -10,10 +10,24 @@ const { findDuplicateGroups } = require('./duplicate-scanner');
 const { readPsdPreviewData } = require('./psd-preview');
 const itemUtils = require('./renderer/item-utils');
 const { applyWindowSecurity } = require('./window-security');
+const { createDirectoryWatcher } = require('./directory-watcher');
 
 let mainWindow;
 let settingsWindow;
 let hasMigratedLegacyStorage = false;
+
+const directoryWatcher = createDirectoryWatcher({
+  onChange: () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('items:changed');
+    }
+  },
+  onError: (error) => console.warn('Could not watch the selected folder:', error.message)
+});
+
+function watchRootFolder(folderPath = getRootFolder()) {
+  directoryWatcher.watch(folderPath);
+}
 
 const APP_DATA_FOLDER = 'PrintaView';
 const SETTINGS_FILE_NAME = 'printaview-settings.json';
@@ -485,6 +499,7 @@ ipcMain.handle('folder:browse', async () => {
     }
     const selectedPath = result.filePaths[0];
     saveCustomRootFolder(selectedPath);
+    watchRootFolder(selectedPath);
     return { ok: true, path: selectedPath };
   } catch (error) {
     return { ok: false, error: error.message };
@@ -792,12 +807,17 @@ ipcMain.on('settings:open', () => {
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   createMainWindow();
+  watchRootFolder();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow();
     }
   });
+});
+
+app.on('before-quit', () => {
+  directoryWatcher.close();
 });
 
 app.on('window-all-closed', () => {
