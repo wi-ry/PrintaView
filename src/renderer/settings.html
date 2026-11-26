@@ -335,8 +335,8 @@
           aria-selected="true" aria-controls="display-panel" tabindex="0">Appearance</button>
         <button id="file-types-tab" class="settings-tab" type="button" role="tab"
           aria-selected="false" aria-controls="file-types-panel" tabindex="-1">File Types</button>
-        <button id="hidden-files-tab" class="settings-tab" type="button" role="tab"
-          aria-selected="false" aria-controls="hidden-files-panel" tabindex="-1">Hidden Files</button>
+        <button id="file-management-tab" class="settings-tab" type="button" role="tab"
+          aria-selected="false" aria-controls="file-management-panel" tabindex="-1">File Management</button>
         <button id="about-tab" class="settings-tab" type="button" role="tab"
           aria-selected="false" aria-controls="about-panel" tabindex="-1">About</button>
       </div>
@@ -391,12 +391,6 @@
           </div>
         </div>
 
-        <div class="settings-item">
-          <label>
-            <input id="auto-scan-files" type="checkbox" checked />
-            Automatically scan for file changes
-          </label>
-        </div>
       </section>
 
       <section id="file-types-panel" class="settings-tab-panel" role="tabpanel"
@@ -420,9 +414,16 @@
         </div>
       </section>
 
-      <section id="hidden-files-panel" class="settings-tab-panel" role="tabpanel"
-        aria-labelledby="hidden-files-tab" tabindex="0" hidden>
+      <section id="file-management-panel" class="settings-tab-panel" role="tabpanel"
+        aria-labelledby="file-management-tab" tabindex="0" hidden>
         <div class="settings-section">
+          <div class="settings-section-title">File Management</div>
+          <div class="settings-item">
+            <label>
+              <input id="auto-scan-files" type="checkbox" checked />
+              Automatically scan for file changes
+            </label>
+          </div>
           <div class="settings-section-title">Hidden Files</div>
           <div class="settings-item">
             <label>
