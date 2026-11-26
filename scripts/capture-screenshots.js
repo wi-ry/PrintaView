@@ -21,19 +21,6 @@ function getDemoFolder() {
   return path.join(imagesDirectory, 'staging');
 }
 
-async function setWindowSize(app, window, size) {
-  await app.evaluate(({ BrowserWindow }) => {
-    const targetWindow = BrowserWindow.getAllWindows().find((candidate) =>
-      candidate.webContents.getURL() === windowUrl
-    );
-    if (!targetWindow) throw new Error(`Could not find window: ${windowUrl}`);
-    targetWindow.setSize(size.width, size.height);
-  }, { windowUrl: await window.url(), size });
-  await window.waitForFunction(({ width, height }) =>
-    window.innerWidth === width && window.innerHeight === height,
-  size);
-}
-
 async function waitForItems(window) {
   await window.locator('#downloads-path').waitFor({ state: 'visible' });
   await window.waitForFunction(() => {
@@ -162,7 +149,7 @@ async function captureScreenshots() {
 
     const mainWindow = await app.firstWindow();
     const cards = mainWindow.locator('#grid .card');
-    await setWindowSize(app, mainWindow, mainWindowSize);
+    await mainWindow.setViewportSize(mainWindowSize);
     await waitForItems(mainWindow);
     const displayedFolder = await mainWindow.locator('#downloads-path').textContent();
     if (path.resolve(displayedFolder) !== path.resolve(demoFolder)) {
