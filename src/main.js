@@ -296,7 +296,8 @@ function loadSettings() {
       filters: null,
       defaultFileTypes: ['image', 'pdf', 'tiff'],
       customExtensions: [],
-      theme: 'default'
+      theme: 'default',
+      autoScanFiles: true
     };
   }
 }
